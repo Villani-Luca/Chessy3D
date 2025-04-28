@@ -1,0 +1,6 @@
+# Core AI libraries
+torch
+torchvision
+
+# Image processing
+opencv-python
