@@ -59,5 +59,12 @@ with open(path) as f:
         games.loc[game_n] = pd.Series(game.headers)
         game_n = game_n + 1
 
+        board = game.board()
+        for move in game.mainline_moves():
+            board.push(move)
+
+        print(board)
+
+
 print(len(games))
 print('test')

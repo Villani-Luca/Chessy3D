@@ -1,3 +1,5 @@
+dataset di partite con mosse e metadati https://lumbrasgigabase.com/en/
+
 
 nel db per ogni posizione salvata:
     - avere un feature vector o qualcosa su cui si possa fare una similarità

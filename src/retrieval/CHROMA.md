@@ -16,7 +16,10 @@ Descrizione della struttura del database:
 
 ## Embeddings
 
-### Metodo per embeddings
+il metodo più stupido da provare è avere un embeddings one hot encoded 8x8x6x2 ( 8x8 celle, 6 stati (K, Q, B, R, P, NONE), (W, B))
+per un totale di 768 bits per embeddings
+
+### Metodo per embeddings semantici delle mosse
 https://medium.com/data-science/chess2vec-map-of-chess-moves-712906da4de9
 
 
