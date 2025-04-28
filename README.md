@@ -14,3 +14,9 @@ The project is structure in the following modules:
 5. Chessboard reference detection and creation of the state in the FEN notation.
 6. Retrieval of chess games with a similar state.
 7. UI for the visualization of the results.
+
+
+
+# Reference
+
+Chess Recognition Dataset (ChessReD): https://data.4tu.nl/datasets/99b5c721-280b-450b-b058-b2900b69a90f/2

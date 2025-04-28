@@ -20,3 +20,11 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+
+# Dataset
+data/
+!data/.gitkeep
+
+# Model artifacts (checkpoints, weights, etc.)
+models/
+!models/.gitkeep
