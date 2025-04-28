@@ -6,7 +6,6 @@ nel db per ogni posizione salvata:
 tenere tutti questi dati all'interno di una singola collezzione potrebbe generare dei problemi.
 di conseguenza si creano due collezzioni di documenti:
     - embeddings: che contiene la posizione vettorizzata e un id 
-    - indices: che contiene relativo al id della posizione vetorizzata la posizione delle partite in cui si trova quelal posizione
     - games: in cui si hanno tutte le partite con le relative posizioni e metadati
 
 DB vettoriale https://docs.trychroma.com/docs/overview/introduction con sdk per python "pip install chromadb"
@@ -22,7 +21,12 @@ per un totale di 768 bits per embeddings
 ### Metodo per embeddings semantici delle mosse
 https://medium.com/data-science/chess2vec-map-of-chess-moves-712906da4de9
 
-
-## Indices
-
 ## Games
+games é un json con tutti i dati relativi alla partita al suo interno ( fen, eventi ecc... )
+
+i metadati contengono principalmente le mosse, nel formato 
+{
+    moves: {
+        
+    }
+}

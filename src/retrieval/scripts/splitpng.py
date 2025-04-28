@@ -1,16 +1,19 @@
 import os
+import pathlib
 
-INPUT_PATH = "D:/uni/Chessy3D_Lumbras/LumbrasGigaBase 2020.pgn"
-OUTPUT_FOLDER = "D:/uni/Chessy3D_Lumbras/splitted"
-SPLIT_SIZE = 100
+ROOT = pathlib.Path.cwd().parent.parent.parent
+INPUT_PATH =  (ROOT / 'data/retrieval/lumbrasgigabase/lumbrasgigabase_2020.pgn').resolve()
+OUTPUT_FOLDER = (ROOT / 'data/retrieval/lumbrasgigabase/splitted').resolve()
+
+SPLIT_SIZE = 1000
 ONLY_ONE = True
 
 def split_large_file(input_path, output_path, output_prefix='split_part'):
     file_counter = 1
-    filename = os.path.basename(input_path)
+    filename = input_path.name.split('.')[0]
     output_file = open(f"{output_path}/{filename}_{file_counter}.pgn", "w", encoding="utf-8")
 
-    with open(input_path, "r", encoding="utf-8") as f:
+    with input_path.open('r') as f:
         count = 0
         prev_line_empty = False
 
@@ -35,4 +38,4 @@ def split_large_file(input_path, output_path, output_prefix='split_part'):
 
 # Example usage
 
-split_large_file(INPUT_PATH, OUTPUT_FOLDER)
+split_large_file(INPUT_PATH, OUTPUT_FOLDER.as_posix())
