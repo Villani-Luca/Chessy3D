@@ -1,30 +1,22 @@
 # Chessy3D
 
-Abbiamo identificato i seguenti moduli:
-- Identificazione della scacchiera nella immagine
-- Identificare l'orientazione della scacchiera nell'immagine ( soggetta a possibile limitazioni )
-- Trovare le celle della scacchiera
-- Distinguere i vari componenti della cella
-- Rappresentazione digitale 2d dello stato estratto
-- Modulo di retrieval dato uno stato della scacchiera con partite simili
+The project is structure in the following modules:
+
+1. Chessboard localization inside the image.
+    - Provides a list of found chessboards, containing the coordinates of the 4 corners.
+    - Provides information about the camera/scene.
+2. Chessboard cells localization inside the chessboard.
+    - For every valid chessboard provides a list of cells, containing the coordinates of the 4 cell corners and the color of che cell.
+3. Chess pieces detection and localization inside the image.
+   - Find all chess pieces and provides information about the type, the color and the bounding box.
+4. Mapping detected chess pieces inside the correct chessboard cells.
+   - Based on the camera/scene conditions.
+5. Chessboard reference detection and creation of the state in the FEN notation.
+6. Retrieval of chess games with a similar state.
+7. UI for the visualization of the results.
 
 
-Moduli nella src:
-- Modulo 1: 
-  - deve estrarre i corner della scacchiera 
-  - darla in input che sarà un array di array di 4 punti
-  - deve estrarre anche l'angolazione dell'immagine e i dati aggiuntivi della telecamera
-- Modulo 2:
-  - input: array e immagine
-  - metodo: LARRIS e a manazza
-  - output: array di 64 elementi con 4 punti per elemento + colore; darà in output solo le scacchiere valide
-- Modulo 3:
-  - object detection con transformers (tipo e colore)
-- Modulo 4:
-  - matching modulo 3  + modulo 2
-- Modulo 5:
-  - direzione + orientamento (opzionale) di default arriva da bianco + scacchiera 2D finale
-- Modulo 6: 
-  - retrieval per similarità (calcolo similarita, ricerca db per partite simili)
-- Modilo 7: 
-  - UI
+
+# Reference
+
+Chess Recognition Dataset (ChessReD): https://data.4tu.nl/datasets/99b5c721-280b-450b-b058-b2900b69a90f/2
