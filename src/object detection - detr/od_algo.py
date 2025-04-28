@@ -1,1 +1,0 @@
-# Studying DETR for object detection
