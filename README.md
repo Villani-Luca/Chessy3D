@@ -26,3 +26,5 @@ Moduli nella src:
   - direzione + orientamento (opzionale) di default arriva da bianco + scacchiera 2D finale
 - Modulo 6: 
   - retrieval per similarità (calcolo similarita, ricerca db per partite simili)
+- Modilo 7: 
+  - UI
