@@ -140,6 +140,11 @@ def get_lines(img):
 
     return np.array(lines).squeeze()
 
+# History:
+#   First attempt: cv2.findChessboardCorners
+#   Second attempt: cv2.Canny + cv2.HoughLinesP + Hierarchical clustering (AgglomerativeClustering) using slopes as features
+#   Third attempt: cv2.Canny + cv2.HoughLinesP + Hierarchical clustering (AgglomerativeClustering) using abs of arctan angles as features
+
 if __name__ == "__main__":
     image_path = os.path.abspath("data/chessred2k/images/0/G000_IMG000.jpg")
 
@@ -162,8 +167,10 @@ if __name__ == "__main__":
 
     # arctan is used as a surrogate of the slope to avoid division by infinity
     angles = np.abs(np.arctan2(y_diff, x_diff)).reshape(-1, 1)
-
     labels = model.fit_predict(angles)
 
-    draw_line_segments_extended(lines, img, labels, True)
+    # TODO: try this on the entire dataset to see if the clustering is consistent
     # debug_clustered_lines(angles, labels)
+
+    draw_line_segments_extended(lines, img, labels, True)
+
