@@ -15,3 +15,6 @@ di conseguenza si creano due collezzioni di documenti:
 DB vettoriale https://docs.trychroma.com/docs/overview/introduction con sdk per python "pip install chromadb"
 
 un modo per rendere più veloce l'import sarebbe spezzare il file in molteplici
+
+## 28/04/2025
+effetetuato il primo testing per buttare roba dentro chroma e 

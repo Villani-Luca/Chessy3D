@@ -5,16 +5,16 @@ ROOT = pathlib.Path.cwd().parent.parent.parent
 INPUT_PATH =  (ROOT / 'data/retrieval/lumbrasgigabase/lumbrasgigabase_2020.pgn').resolve()
 OUTPUT_FOLDER = (ROOT / 'data/retrieval/lumbrasgigabase/splitted').resolve()
 
-SPLIT_SIZE = 1000
-ONLY_ONE = True
+SPLIT_SIZE = 5000
+ONLY_ONE = False
 
-def split_large_file(input_path, output_path, output_prefix='split_part'):
+def split_large_file(input_path, output_path, output_prefix='split_part', starting_number = 0):
     file_counter = 1
     filename = input_path.name.split('.')[0]
-    output_file = open(f"{output_path}/{filename}_{file_counter}.pgn", "w", encoding="utf-8")
+    output_file = open(f"{output_path}/{file_counter}_{starting_number}_lumbras.pgn", "w", encoding="utf-8")
 
     with input_path.open('r') as f:
-        count = 0
+        count = starting_number
         prev_line_empty = False
 
         for line in f:
@@ -29,7 +29,7 @@ def split_large_file(input_path, output_path, output_prefix='split_part'):
                         break
 
                     file_counter += 1
-                    output_file = open(f"{output_path}/{filename}_{file_counter}.pgn", "w", encoding="utf-8")
+                    output_file = open(f"{output_path}/{file_counter}_{count}_lumbras.pgn", "w", encoding="utf-8")
 
             output_file.write(line)
             prev_line_empty = (line.strip() == '')

@@ -16,3 +16,37 @@ create table if not exists moves
         PRIMARY KEY (chromaid, gameid)
 );
 
+create table if not exists tempgames
+(
+    Event         text,
+    Site          text,
+    Date          text,
+    Round         text,
+    White         text,
+    Black         text,
+    Result        text,
+    ResultDecimal text,
+    WhiteTitle    text,
+    BlackTitle    text,
+    WhiteElo      text,
+    BlackElo      text,
+    ECO           text,
+    Opening       text,
+    Variation     text,
+    WhiteFideId   text,
+    BlackFideId   text,
+    EventDate     text,
+    Annotator     text,
+    PlyCount      text,
+    TimeControl   text,
+    Time          text,
+    Termination   text,
+    Mode          text,
+    FEN           text,
+    SetUp         text,
+    Moves         text,
+    id            integer
+        constraint table_name_pk
+            primary key autoincrement
+);
+

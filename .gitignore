@@ -28,3 +28,8 @@ data/
 # Model artifacts (checkpoints, weights, etc.)
 models/
 !models/.gitkeep
+
+# Visual studio
+/src/retrieval/prep/.vs/
+/src/retrieval/prep/obj/
+/src/retrieval/prep/bin/
