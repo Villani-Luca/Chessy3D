@@ -116,7 +116,7 @@ internal class PgnParserJIT
                 string moves = "";
                 while (!line.IsEmpty)
                 {
-                    moves += line.ToString().TrimEnd();
+                    moves += " " + line.ToString().TrimEnd();
                     exit = !enumerator.MoveNext();
                     if (exit)
                         break;

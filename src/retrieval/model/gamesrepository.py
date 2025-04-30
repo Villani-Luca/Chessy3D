@@ -1,21 +1,8 @@
 import pathlib
-from abc import ABC, abstractmethod
 from src.retrieval.model.game import Game
 import sqlite3
 from datetime import datetime
-
-class GamesRepository(ABC):
-    @abstractmethod
-    def game_by_id(self, game_id) -> Game:
-        pass
-
-    @abstractmethod
-    def games_by_move(self, moveid) -> list[Game]: # TODO: define pagination and filters
-        pass
-
-    @abstractmethod
-    def save_game(self, game: Game):
-        pass
+import typing
 
 class Connection:
     _conn = None
@@ -23,6 +10,8 @@ class Connection:
     def __init__(self, db_path):
         if self._conn is None:
             self._conn = sqlite3.connect(db_path)
+            self._conn.execute('pragma journal_mode=wal')
+
         self.cursor = self._conn.cursor()
 
     def __del__(self):
@@ -38,49 +27,40 @@ class Connection:
         self.cursor.executescript(migration_path.read_text())
         self.commit()
 
+    def close(self):
+        self.cursor.close()
+        self._conn.close()
 
-class SqliteGamesRepository(GamesRepository):
+class SqliteMovesRepository:
     conn: Connection = None
 
     def __init__(self, conn: Connection):
         self.conn = conn
 
-    def game_by_id(self, game_id) -> Game:
-        query = """SELECT id, date, event, site 
-FROM games 
-WHERE id = ?"""
+    def get_highest_gameid(self):
+        query = "SELECT MAX(gameid) FROM moves"
+        res = self.conn.cursor.execute(query).fetchone()
+        return res[0] or 0
 
-        self.conn.cursor.execute(query, (game_id,))
-        res = self.conn.cursor.fetchone()
-        return SqliteGamesRepository.__game_from_result(res)
+    def save_moves(self, moves: list[(int, str)]):
+        #query = """INSERT or IGNORE INTO moves (gameid, chromaid) VALUES (?, ?)"""
+        query = """INSERT INTO moves (gameid, chromaid) VALUES (?, ?) ON CONFLICT (gameid, chromaid) DO NOTHING"""
+        self.conn.cursor.executemany(query, moves)
 
-    def games_by_move(self, moveid, top = 50) -> list[Game]:
-        query = """SELECT id, date, event, site 
-FROM games 
-WHERE id IN (
-    SELECT m.gameid
-    FROM moves m
-    WHERE m.chromaid = ?
-    LIMIT ?
-)
-"""
+class SqliteGamesRepository:
+    conn: Connection = None
 
-        self.conn.cursor.execute(query, (moveid, top))
-        res = self.conn.cursor.fetchall()
-        return [SqliteGamesRepository.__game_from_result(x) for x in res]
+    def __init__(self, conn: Connection):
+        self.conn = conn
 
-
-    def save_game(self, game: Game):
-        query = """INSERT INTO games (id, date, event, site) VALUES (?, ?, ?, ?)"""
-        self.conn.cursor.execute(query, (
-            game.id,
-            datetime.timestamp(game.date) if game.date is not None else None,
-            game.event,
-            game.site
-        ))
+    def get_games_moves(self, sentinelid: int, limit: int = 100) -> list[typing.Tuple[int, str]]:
+        '''returns list[(gameid, moves)]'''
+        query = """SELECT id, moves FROM games WHERE id > ? ORDER BY id ASC LIMIT ?"""
+        return self.conn.cursor.execute(query, (sentinelid, limit)).fetchall()
 
     @staticmethod
     def __game_from_result(res):
+        # TODO: da rifare
         game = Game(res[0])
         game.date = datetime.fromtimestamp(res[1]) if res[1] is not None else None
         game.event = res[2]

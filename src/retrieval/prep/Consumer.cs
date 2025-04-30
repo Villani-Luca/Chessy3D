@@ -54,20 +54,37 @@ internal class ParseResultConsumer : IDisposable
         _threadId = threadId;
      }
 
+    private SqliteTransaction EnsureTransaction()
+    {
+        while (true)
+        {
+            try
+            {
+                return _sqliteConnection.BeginTransaction();
+            }
+            catch(SqliteException ex)
+            {
+                Log.Error(ex, "Error creating transaction: {message}", ex.Message);
+                Thread.Sleep(100);
+            }
+        }
+    }
+
     public void Consume()
     {
         long processed = 0;
 
 
-        var transaction = _sqliteConnection.BeginTransaction();
+        var transaction = EnsureTransaction();
         _command.Transaction = transaction;
 
         while (true)
         {
             if (!_queue.TryDequeue(out var result))
             {
-                if(_token.IsCancellationRequested)
+                if (_token.IsCancellationRequested)
                     break;
+                
 
                 Thread.Sleep(10);
                 continue;
@@ -79,15 +96,14 @@ internal class ParseResultConsumer : IDisposable
             if (processed % 5000 == 0)
             {
                 transaction.Commit();
-                transaction.Dispose();
-
-                transaction = _sqliteConnection.BeginTransaction();
+                transaction = EnsureTransaction();
                 _command.Transaction = transaction;
 
                 Log.Information("[{thread} - SAVED] {processed}", _threadId, processed);
             }
         }
 
+        transaction.Commit();
         _command.Dispose();
         transaction.Dispose();
     }

@@ -17,7 +17,7 @@ Log.Logger = new LoggerConfiguration()
 CoconaLiteApp.Run((
     string pgnfolder = """D:\Projects\Uni\Chessy3D\data\retrieval\lumbrasgigabase\splitted""", 
     string chromaurl = "http://localhost:8000", 
-    string sqliteconn = """Data Source=D:\Projects\Uni\Chessy3D\data\retrieval\sqlite.db""",
+    string sqliteconn = """Data Source=D:\Projects\Uni\Chessy3D\data\retrieval\sqlite.db;Pooling=True""",
     bool clear_db = true,
     int max_file_record_size = 5000
     ) =>
@@ -47,7 +47,7 @@ CoconaLiteApp.Run((
     var queue = new ConcurrentQueue<ParseResultJIT>();
     var cancellationTokenSource = new CancellationTokenSource();
 
-    const int consumer_thread_number = 3;
+    const int consumer_thread_number = 5;
     Thread[] threadArray = new Thread[consumer_thread_number];
     for(int i = 0; i < consumer_thread_number; i++)
     {

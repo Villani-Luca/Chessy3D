@@ -15,7 +15,7 @@ import pandas as pd
 
 import helper
 from src.retrieval.model.game import Game
-from src.retrieval.model.gamesrepository import Connection, GamesRepository, SqliteGamesRepository
+from src.retrieval.model.gamesrepository import Connection, SqliteGamesRepository
 
 import concurrent.futures
 import multiprocessing
