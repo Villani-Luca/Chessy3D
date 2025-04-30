@@ -16,6 +16,15 @@ internal class SqliteRepo
         _connection = connection;
     }
 
+    public void ClearTempTable()
+    {
+        using var command = _connection.CreateCommand();
+        command.CommandType = System.Data.CommandType.Text;
+        command.CommandText = "delete from games;";
+        command.ExecuteNonQuery();
+    }
+
+    /*
     public void Save(ParseResult result)
     {
         using var transaction = _connection.BeginTransaction();
@@ -209,4 +218,5 @@ internal class SqliteRepo
             throw;
         }
     }
+    */
 }

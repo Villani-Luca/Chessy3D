@@ -1,13 +1,6 @@
-﻿using prep.data;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿namespace prep;
 
-namespace prep;
-
-public record struct ParseResult
+public record ParseResult
 {
     public int Parsed;
 
@@ -39,6 +32,7 @@ public record struct ParseResult
     //public string?[] SetUp;
     public string[] Moves;
     //public string?[] Embedding;
+    public string[] Source;
 
     public ParseResult(int n)
     {
@@ -67,26 +61,17 @@ public record struct ParseResult
         Termination = new string[n];
         Mode = new string[n];
         Moves = new string[n];
+        Source = new string[n];
     }
 
 }
 
 internal class PgnParser
 {
-    private readonly Stream _stream;
-
-    public PgnParser(Stream stream)
-    {
-        _stream = stream;
-    }
-
-    // TODO: parsing state machine
-    
     public ParseResult Parse(ReadOnlySpan<char> content, int max)
     {
         var result = new ParseResult(max);
 
-        bool inGame = false;
         var currentGame = 0;
 
         var enumerator = content.EnumerateLines();
@@ -124,6 +109,7 @@ internal class PgnParser
                 // else if (line.StartsWith("[Moves ")) result.Moves[currentGame] = line.Slice(space + 1, header_end - space - 1).Trim('"').ToString();
                 // else if (line.StartsWith("[FEN ")) result.FEN[currentGame] = line.Slice(space + 1, header_end - space - 1).Trim('"').ToString();
                 // else if (line.StartsWith("[Setup ")) result.Annotator[currentGame] = line.Slice(space + 1, header_end - space - 1).Trim('"').ToString();
+                else if (line.StartsWith("[Source ")) result.Source[currentGame] = line.Slice(space + 1, header_end - space - 1).Trim('"').ToString();
             }
             else if (!line.IsEmpty)
             {
@@ -141,10 +127,6 @@ internal class PgnParser
                 result.Moves[currentGame] = moves;
                 currentGame += 1;
                 // parse moves, read everything till next line 
-            }
-            else
-            {
-                inGame = false;
             }
         } while (!exit && enumerator.MoveNext());
 

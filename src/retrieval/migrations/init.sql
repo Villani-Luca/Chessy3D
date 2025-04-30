@@ -1,9 +1,40 @@
-create table if not exists games
+-- games definition
+
+-- games definition
+
+CREATE TABLE "games"
 (
-    event TEXT,
-    site  TEXT,
-    date  INTEGER,
-    id    INTEGER
+    event         text,
+    site          text,
+    date          text,
+    round         text,
+    white         text,
+    black         text,
+    "result"        text,
+    resultdecimal text,
+    whitetitle    text,
+    blacktitle    text,
+    whiteelo      text,
+    blackelo      text,
+    eco           text,
+    opening       text,
+    variation     text,
+    whitefideid   text,
+    blackfideid   text,
+    eventdate     text,
+    annotator     text,
+    plycount      text,
+    timecontrol   text,
+    time          text,
+    termination   text,
+    mode          text,
+    fen           text,
+    setup         text,
+    moves         text,
+    id            integer
+        constraint table_name_pk
+            primary key autoincrement,
+    "source" text
 );
 
 create table if not exists moves
@@ -14,39 +45,5 @@ create table if not exists moves
             REFERENCES games (id),
     CONSTRAINT moves_pk
         PRIMARY KEY (chromaid, gameid)
-);
-
-create table if not exists tempgames
-(
-    Event         text,
-    Site          text,
-    Date          text,
-    Round         text,
-    White         text,
-    Black         text,
-    Result        text,
-    ResultDecimal text,
-    WhiteTitle    text,
-    BlackTitle    text,
-    WhiteElo      text,
-    BlackElo      text,
-    ECO           text,
-    Opening       text,
-    Variation     text,
-    WhiteFideId   text,
-    BlackFideId   text,
-    EventDate     text,
-    Annotator     text,
-    PlyCount      text,
-    TimeControl   text,
-    Time          text,
-    Termination   text,
-    Mode          text,
-    FEN           text,
-    SetUp         text,
-    Moves         text,
-    id            integer
-        constraint table_name_pk
-            primary key autoincrement
 );
 
