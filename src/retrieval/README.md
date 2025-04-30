@@ -18,3 +18,12 @@ un modo per rendere più veloce l'import sarebbe spezzare il file in molteplici
 
 ## 28/04/2025
 effetetuato il primo testing per buttare roba dentro chroma e 
+
+# 29/04/2025
+un problema che si ha é cosa usare come id della posizione dato che dovrá essere efficiente 
+per poter indicizzare possibilmente delle tabelle con decine di milioni di record.
+
+il primo tentativo é stato usare una descrizione della posizione chiamata FEN ma troppo lunga e inefficiente
+per poi scoprire Zobrist hashing 
+
+inoltre le performance di python del parsing del database erano troppo inferiori al necessario passando quindi ad un parsing custom c#
