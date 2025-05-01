@@ -131,19 +131,13 @@ def get_lines(img):
     lines = cv2.HoughLinesP(  # Probabilistic Hough Transform (PHT)
         edges,
         rho=1,  # 1 pixel resolution -> this is usually fine like this
-        theta=math.pi
-        / 180,  # 1 degree resolution (in radiants) -> this is usually fine like this
+        theta=math.pi / 180,  # 1 degree resolution (in radiants) -> this is usually fine like this
         threshold=100,  # lower = detect more lines (including noise), higher = keep only clear lines
         minLineLength=100,  # lower = detect short and fragmented lines, higher = discard short and fragmented lines
         maxLineGap=10,  # lower = close lines are considered separated, higher = close lines are considered the same (merged)
     )
 
     return np.array(lines).squeeze()
-
-# History:
-#   First attempt: cv2.findChessboardCorners
-#   Second attempt: cv2.Canny + cv2.HoughLinesP + Hierarchical clustering (AgglomerativeClustering) using slopes as features
-#   Third attempt: cv2.Canny + cv2.HoughLinesP + Hierarchical clustering (AgglomerativeClustering) using abs of arctan angles as features
 
 if __name__ == "__main__":
     image_path = os.path.abspath("data/chessred2k/images/0/G000_IMG000.jpg")
