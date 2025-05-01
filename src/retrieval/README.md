@@ -27,3 +27,26 @@ il primo tentativo é stato usare una descrizione della posizione chiamata FEN m
 per poi scoprire Zobrist hashing 
 
 inoltre le performance di python del parsing del database erano troppo inferiori al necessario passando quindi ad un parsing custom c#
+
+purtroppo peró la seconda parte di geenrazione dei embedding e salvataggio sono lentiessime in chroma 5 secondi per 5000 record
+da trovare soluzioni
+
+# 30/04/2025
+
+testando con vari database vettoriali, quelli forniti localmente 
+o comunque in sistemi piú semplici ( ovvero docker ecc.. ) si rivelano molto lenti 
+e per l'ammontare di dati che si vuole utilizzare ( TODO: da riveredere ) circa 75 milioni posizioni uniche
+non si prestano benissimo
+
+un metodo esplorato é una codifica dei pezzi ideata da stockfish e adattata da lichess
+https://lichess.org/@/revoof/blog/adapting-nnue-pytorchs-binary-position-format-for-lichess/cpeeAMeY
+
+messa in pausa per indagare 
+
+Retrieval of Similar Chess Positions
+Debasis Ganguly Johannes Leveling Gareth J. F. Jones
+School of Computing, Centre for Next Generation Localisation
+Dublin City University, Dublin 9, Ireland
+{dganguly, jleveling, gjones}@computing.dcu.ie
+
+https://doras.dcu.ie/20378/1/ganguly-sigir2014.pdf

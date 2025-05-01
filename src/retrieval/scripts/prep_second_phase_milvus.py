@@ -8,8 +8,7 @@ from time import sleep
 import chess.pgn
 import chess.polyglot
 
-import chromadb
-from chromadb.api.models import AsyncCollection
+import pymilvus as milvus
 
 import helper
 from src.retrieval.model.gamesrepository import Connection, SqliteGamesRepository, SqliteMovesRepository
@@ -22,7 +21,7 @@ import re
 import asyncio
 
 ROOT = pathlib.Path.cwd().parent.parent.parent
-CHROMA_PATH = ('localhost', 8000)
+MILVUS_PATH = (ROOT / 'data/retrieval/milvus.db').resolve()
 SQLITE_PATH = (ROOT / 'data/retrieval/sqlite.db').resolve()
 SAN_MOVE_REGEX = r'(?:\d+\.)?([KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?|O-O(?:-O)?)[+#]?'
 
@@ -69,9 +68,7 @@ class Consumer:
     sqlite_connection: Connection
     moves_repo: SqliteMovesRepository
 
-    chroma_client: chromadb.AsyncHttpClient
-    chroma_embeddings: AsyncCollection
-    chroma_max_batch_size: int
+    milvus_client: milvus.MilvusClient
 
     games_number_batch: int
     sqlite_current_batch: list[tuple[int, str]]
@@ -154,6 +151,8 @@ class Consumer:
         print(f'[SAVER {self.thread_id}] CLOSED')
 
     async def setup(self):
+        self.milvus_client = milvus.MilvusClient('')
+
         self.chroma_client = await chromadb.AsyncHttpClient(host=CHROMA_PATH[0], port=CHROMA_PATH[1])
 
         self.chroma_embeddings = await self.chroma_client.create_collection("embeddings", get_or_create=True)
@@ -177,7 +176,7 @@ if __name__ == '__main__':
     queue = multiprocessing.Queue()
     event = multiprocessing.Event()
 
-    consumer_processes = [multiprocessing.Process(target=Consumer(i, queue, event).process) for i in range(5)]
+    consumer_processes = [multiprocessing.Process(target=Consumer(i, queue, event).process) for i in range(1)]
     for process in consumer_processes:
         process.start()
 
