@@ -29,7 +29,7 @@ The Hough algorithm has two versions:
 - HoughLines is used to detect lines in polar coordinates (infinite lines).
 - HoughLinesP (probabilistic Hough) is used to detect segments delimited by two points in the Cartesian place.
 
-cv2.HoughLinesP was chosen because it's more appropriate for real-world images.
+cv2.HoughLinesP was chosen because it works better when there are pieces occluding the chessboard borders.
 
 The next step was to group the segments into vertical and horizontal.
 A naive approach of using a treshold on segments angular coefficient doesn't work because the segments can be oriented in any possible direction inside the image.
@@ -46,3 +46,27 @@ The second problem was solved by computing the absolute value of the features, g
 The clustering was performed using hierarchical agglomerative clustering, using the euclidian distance as distance metric and the ward linkage type, using a threshold which allows to have 2 clusters.
 
 An alternative (not tested) options is to apply k-means with a cluster size of 2.
+
+## 2025-05-01
+
+The second point of the list, related to the absolute value, was actually working only for a subset of cases.
+
+To improve the process, the first attempt was to make sure HoughLines and HoughLinesP could both work with the same pipeline. This allows to alternate between them and see which one provides the best result.
+
+- HoughLines provides the angular coeffients folder within [0, π].
+- HoughLinesP provides the coordinates of the segments, from which the angular coefficient m can be calculated. This is equivalent to the tan(angle), so the angle, defined in the range [-π, π], was calculated by applying arctan(m). This was then folded to [0, π] to be compatible with HoughLines.
+
+Beinng in the range [0, π] provides a benefit of being independend from the direction of the segment but it doens't solve the problem for segments where the angle is close to 0 and close to π. In this contex the angle 0 = angle π.
+
+The first attempt was to apply an heuristic where all angles in degrees in the range [140-180] were flipped to the top right quadrant by subtracting 180 deg.
+
+This provides a significant improvament over the absolute value but not covering all cases.
+
+Another attempt was made to change the way the distannce is calculated during clustering, using cosine similarity over euclidian distance.
+
+This forced to change the linkage method since ward can only be used with the euclidian distance.
+To make sure the clustering is not leaving weard angles outside, the complete linkage was chosen.
+
+The cosine similarity is able to solving both the problem of having angle 0 = angle π but it treats lines with negative angles similar to lines with positive angles, which is not what is required here.
+
+An additional problem with cosine similarity is that it doesn't work if dx is = 0 or dy = 0 (zero vectors).
