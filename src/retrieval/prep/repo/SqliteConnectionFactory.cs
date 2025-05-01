@@ -62,7 +62,8 @@ public class SqliteAddParseResultJITCommand : IDisposable
             mode, 
             fen, 
             setup, 
-            moves
+            moves,
+            source
         )
         values (
             @Event, 
@@ -91,7 +92,8 @@ public class SqliteAddParseResultJITCommand : IDisposable
             @Mode, 
             @FEN, 
             @SetUp, 
-            @Moves
+            @Moves,
+            @Source
         );
         """;
 
@@ -122,6 +124,7 @@ public class SqliteAddParseResultJITCommand : IDisposable
         var parameter_25 = command.CreateParameter();
         var parameter_26 = command.CreateParameter();
         var parameter_27 = command.CreateParameter();
+        var parameter_28 = command.CreateParameter();
 
         parameter_1.ParameterName = "@Event";
         parameter_2.ParameterName = "@Site";
@@ -150,6 +153,7 @@ public class SqliteAddParseResultJITCommand : IDisposable
         parameter_25.ParameterName = "@FEN";
         parameter_26.ParameterName = "@SetUp";
         parameter_27.ParameterName = "@Moves";
+        parameter_28.ParameterName = "@Source";
 
         command.Parameters.Add(parameter_1);
         command.Parameters.Add(parameter_2);
@@ -178,6 +182,7 @@ public class SqliteAddParseResultJITCommand : IDisposable
         command.Parameters.Add(parameter_25);
         command.Parameters.Add(parameter_26);
         command.Parameters.Add(parameter_27);
+        command.Parameters.Add(parameter_28);
 
         return new SqliteAddParseResultJITCommand(command);
     }
@@ -211,6 +216,7 @@ public class SqliteAddParseResultJITCommand : IDisposable
         _command.Parameters[24].Value   = DBNull.Value;
         _command.Parameters[25].Value   = DBNull.Value;
         _command.Parameters[26].Value   = string.IsNullOrWhiteSpace(result.Moves) ? DBNull.Value : result.Moves;
+        _command.Parameters[27].Value   = string.IsNullOrWhiteSpace(result.Source) ? DBNull.Value : result.Source;
 
         _command.ExecuteNonQuery();
     }
