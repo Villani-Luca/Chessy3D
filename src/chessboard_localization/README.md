@@ -70,3 +70,28 @@ To make sure the clustering is not leaving weard angles outside, the complete li
 The cosine similarity is able to solving both the problem of having angle 0 = angle π but it treats lines with negative angles similar to lines with positive angles, which is not what is required here.
 
 An additional problem with cosine similarity is that it doesn't work if dx is = 0 or dy = 0 (zero vectors).
+
+## 2025-05-02
+
+The core issue is now identified. 
+
+When the chessboard has an orientation close to 0 degress:
+- horizontal lines have angles close to 0 degrees or 180 degrees -> in this case values in the proximity of 0 and 180 degrees must be folded
+- vertical lines have an angle close to 90 degrees
+
+When the chessboard has an orientation close to 45 degrees:
+- both vertical and horizontal lines have angles around 45 degrees and 180-45 degrees. -> in this case values in the proximity of 0 and 180 degrees cannot be folded
+
+Since the orientation of the chessboard is not know in advance, both approaches are not capable of providing accurate results.
+
+The clustering must be done using features which are invariant to the global lines rotation but keeps track of the local horizontal and vertical lines rotation.
+
+To do so, the feature vector used for clustering should contain the cos and the sin of the angle transformed by multiplying its value by 2.
+
+Multiplying the angle by 2 allows to fold 180 into 0 by still keeping the relative distance between the other angles, with a non linear scaling. After the transformation the possible values are still between [-π, π]
+
+The non-linear scaling doens't create any problem because the purpose is to find two cluster of lines which are more or less orthogonal, so there is a clear distinction.
+
+Doing angle mod π also folds 180 degrees into 0 but changes the relative distance between the other angles, depending on the quadrant they are located.
+
+After doubling the angle it's still necessary to ignore the direction of the lines. By using the angle cos and sin values we can make sure lines with the same opposite angles have the same values while non opposite angles don't have the same values.

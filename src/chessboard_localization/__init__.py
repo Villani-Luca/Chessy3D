@@ -2,10 +2,12 @@ import os
 import cv2
 import math
 import numpy as np
-from sklearn.cluster import AgglomerativeClustering
+from sklearn.cluster import AgglomerativeClustering, KMeans
 import pyautogui
 
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+
 
 def debug_image_cv2(img, max_width=800, max_height=800):
 
@@ -35,7 +37,10 @@ def debug_image_cv2(img, max_width=800, max_height=800):
     cv2.waitKey(0)
     cv2.destroyWindow(window_name)
 
-def draw_lines_on_image(lines, img, labels=None, use_original_image=False, line_length=10000):
+
+def draw_lines_on_image(
+    lines, img, labels=None, use_original_image=False, line_length=10000
+):
 
     img_height, img_width = img.shape[:2]
 
@@ -69,12 +74,13 @@ def draw_lines_on_image(lines, img, labels=None, use_original_image=False, line_
 
     return line_img
 
+
 def draw_segments_on_image(segments, img, labels=None, use_original_image=False):
 
     img_height, img_width = img.shape[:2]
 
     if use_original_image:
-         segment_img = img.copy()
+        segment_img = img.copy()
     else:
         segment_img = np.zeros((img_height, img_width, 3), dtype=np.uint8)
 
@@ -95,7 +101,10 @@ def draw_segments_on_image(segments, img, labels=None, use_original_image=False)
 
     return segment_img
 
-def draw_segments_extended_on_image(segments, img, labels=None, use_original_image=False):
+
+def draw_segments_extended_on_image(
+    segments, img, labels=None, use_original_image=False
+):
     if segments is not None:
         img_height, img_width = img.shape[:2]
 
@@ -138,7 +147,8 @@ def draw_segments_extended_on_image(segments, img, labels=None, use_original_ima
 
         return segment_img
 
-def debug_line_angles(angles, labels = None):
+
+def debug_line_angles(angles, labels=None):
     if labels is None:
         colors = None
     else:
@@ -148,6 +158,7 @@ def debug_line_angles(angles, labels = None):
     plt.xlabel("Angle (radians)")
     plt.yticks([])
     plt.show()
+
 
 def calculate_line_coefficients_from_segments(segments):
     x1 = segments[:, 0]
@@ -174,6 +185,79 @@ def calculate_line_coefficients_from_segments(segments):
         line_coeffiecients[vertical_mask, 1] = x1[vertical_mask]
 
     return line_coeffiecients
+
+
+def calculate_normalized_segment_vectors(segments):
+    x1 = segments[:, 0]
+    y1 = segments[:, 1]
+    x2 = segments[:, 2]
+    y2 = segments[:, 3]
+
+    dx = x2 - x1
+    dy = y2 - y1
+
+    norm = np.sqrt(dx**2 + dy**2)
+
+    # this is used to avoid divisions by 0
+    norm[norm == 0] = 1e-8
+
+    normalized_dx = dx / norm
+    normalized_dy = dy / norm
+
+    return np.stack((normalized_dx, normalized_dy), axis=1)
+
+
+def plot_vectors(vectors, labels):
+    origin = np.zeros((vectors.shape[0], 2))
+    plt.figure(figsize=(6, 6))
+
+    unique_labels = np.unique(labels)
+
+    # Up to 10 distinct colors
+    colormap = cm.get_cmap("tab10", len(unique_labels))
+
+    for i, label in enumerate(unique_labels):
+        mask = labels == label
+        color = colormap(i)
+
+        plt.quiver(
+            origin[mask, 0],
+            origin[mask, 1],
+            vectors[mask, 0],
+            vectors[mask, 1],
+            angles="xy",
+            scale_units="xy",
+            scale=1,
+            color=color,
+            alpha=0.8,
+            label=f"Cluster {label}",
+        )
+
+    plt.xlim(-1.1, 1.1)
+    plt.ylim(-1.1, 1.1)
+    plt.gca().set_aspect("equal")
+    plt.grid(True)
+    plt.legend()
+    plt.title("Direction Vectors by Cluster")
+    plt.xlabel("dx")
+    plt.ylabel("dy")
+    plt.show()
+
+
+def cluster_lines_kmeans(features):
+    kmeans = KMeans(n_clusters=2)
+    return kmeans.fit(features).labels_
+
+
+def cluster_lines_hierarchical_agglomerative(features):
+    model = AgglomerativeClustering(
+        n_clusters=2,
+        metric="euclidean",
+        linkage="ward",  # as alternative also "average" is fine
+    )
+
+    return model.fit_predict(features)
+
 
 def compute_with_hough_p(img):
     # debug_image_cv2(img)
@@ -209,42 +293,22 @@ def compute_with_hough_p(img):
     )
 
     segments = np.array(hough_segments).squeeze()
-  
-    line_coefficients = calculate_line_coefficients_from_segments(segments)
+    segments_vectors = calculate_normalized_segment_vectors(segments)
+    angles_radiants = np.arctan2(segments_vectors[:, 1], segments_vectors[:, 0])
 
-    model = AgglomerativeClustering(
-        n_clusters=2,
-        metric="cosine",
-        linkage="complete",  # as alternative also "average" is fine
+    doubled_angles_radiants = angles_radiants * 2
+    features = np.stack(
+        (np.cos(doubled_angles_radiants), np.sin(doubled_angles_radiants)), axis=1
     )
+    labels = cluster_lines_kmeans(features)
 
-    # m = tan(angle) -> angle = arctan(m)
-    # these angles are between [-π, π]
-    angles_radiants = np.arctan(line_coefficients[:,0]) 
-
-    # angles folded between [0, π]
-    #folding_mask = angles_radiants < 0
-    #angles_radiants[folding_mask] = math.pi + angles_radiants[folding_mask]
-
-    #debug_line_angles(angles_radiants)
-
-    # If we don't consider the direction but only the actual angle, then lines with angle π are equivalent to lines with angle 0.
-    # To make sure these two numbers are close, to help the clustering classify the lines correctly, all lines with angle
-    # above a certain threshold (140 degress) are flipped to the left quadrant (π-angle).
-    # This gives also a bit of margin in the classification
-    #equivalence_mask = angles_radiants > math.radians(140)
-    #angles_radiants[equivalence_mask] = math.pi - angles_radiants[equivalence_mask]
-
-    # debug_line_angles(angles_radiants)
-
-    labels = model.fit_predict(angles_radiants.reshape(-1, 1))
-
-    # TODO: try this on the entire dataset to see if the clustering is consistent
-    # debug_clustered_lines(angles_radiants, labels)
+    # debug_line_angles(angles_radiants, labels)
+    # plot_vectors(segments_vectors, labels)
 
     image_with_segments = draw_segments_extended_on_image(segments, img, labels, True)
     debug_image_cv2(image_with_segments)
-  
+
+
 def compute_with_hough(img):
     # debug_image_cv2(img)
 
@@ -278,39 +342,21 @@ def compute_with_hough(img):
 
     lines = np.array(hough_lines).squeeze()
 
-    model = AgglomerativeClustering(
-        n_clusters=2,
-        metric="euclidean",
-        linkage="ward",  # as alternative also "average" is fine
+    angles_radiants = lines[:, 1]
+    doubled_angles_radiants = angles_radiants * 2
+    features = np.stack(
+        (np.cos(doubled_angles_radiants), np.sin(doubled_angles_radiants)), axis=1
     )
-   
-    # These angles are between [0, π]
-    # The copy is necessary because of the alterations of the angle are done just for the clustering.
-    angles_radiants = lines[:, 1].copy() 
 
-    # debug_line_angles(angles_radiants)
+    labels = cluster_lines_kmeans(features)
+    # debug_line_angles(angles_radiants, labels)
 
-    # If we don't consider the direction but only the actual angle, then lines with angle π are equivalent to lines with angle 0.
-    # To make sure these two numbers are close, to help the clustering classify the lines correctly, all lines with angle
-    # above a certain threshold (140 degress) are flipped to the left quadrant (π-angle).
-    # This is an heuristic and may not work in all cases.
-    equivalence_mask = angles_radiants > math.radians(140)
-    angles_radiants[equivalence_mask] = math.pi - angles_radiants[equivalence_mask]
-
-    #debug_line_angles(angles_radiants)
-
-    labels = model.fit_predict(angles_radiants.reshape(-1, 1))
     lines_on_image = draw_lines_on_image(lines, img, labels, True)
     debug_image_cv2(lines_on_image)
 
-if __name__ == "__main__":
-    image_path = os.path.abspath("data/chessred2k/images/0/G000_IMG020.jpg")
-    img = cv2.imread(image_path)
-    #compute_with_hough_p(img)
-    compute_with_hough(img)
 
-# G000_IMG001
-# G000_IMG005
-# G000_IMG006
-# G000_IMG013
-# G000_IMG015
+if __name__ == "__main__":
+    image_path = os.path.abspath("data/chessred2k/images/0/G000_IMG005.jpg")
+    img = cv2.imread(image_path)
+    compute_with_hough_p(img)
+    # compute_with_hough(img)
