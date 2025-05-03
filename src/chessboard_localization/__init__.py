@@ -2,7 +2,7 @@ import os
 import cv2
 import math
 import numpy as np
-from sklearn.cluster import AgglomerativeClustering, KMeans
+from sklearn.cluster import AgglomerativeClustering, KMeans, DBSCAN
 import pyautogui
 
 import matplotlib.pyplot as plt
@@ -258,8 +258,7 @@ def cluster_lines_hierarchical_agglomerative(features):
 
     return model.fit_predict(features)
 
-
-def compute_with_hough_p(img):
+def compute_lines_with_hough_p(img):
     # debug_image_cv2(img)
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -293,23 +292,49 @@ def compute_with_hough_p(img):
     )
 
     segments = np.array(hough_segments).squeeze()
-    segments_vectors = calculate_normalized_segment_vectors(segments)
-    angles_radiants = np.arctan2(segments_vectors[:, 1], segments_vectors[:, 0])
 
-    doubled_angles_radiants = angles_radiants * 2
-    features = np.stack(
-        (np.cos(doubled_angles_radiants), np.sin(doubled_angles_radiants)), axis=1
+    #image_with_segments = draw_segments_extended_on_image(segments, img, None, True)
+    #debug_image_cv2(image_with_segments)
+
+    segments_vectors = calculate_normalized_segment_vectors(segments)  
+    segments_angles_radiants = np.arctan2(segments_vectors[:, 1], segments_vectors[:, 0])
+    segments_doubled_angles_radiants = segments_angles_radiants * 2
+    segments_features = np.stack(
+        (np.cos(segments_doubled_angles_radiants), np.sin(segments_doubled_angles_radiants)), axis=1
     )
-    labels = cluster_lines_kmeans(features)
+
+    """   dbscan = DBSCAN(eps=0.015, min_samples=1).fit(segments_vectors)
+    filtered_segments_list = []
+
+    for label in set(dbscan.labels_):
+        cluster_segments = segments[dbscan.labels_ == label]
+        mean_segment = np.mean(cluster_segments, axis=0)
+        filtered_segments_list.append(mean_segment)
+
+    filtered_segments = np.array(filtered_segments_list)
+
+    filtered_segments_vectors = calculate_normalized_segment_vectors(filtered_segments)  
+    filtered_segments_angles_radiants = np.arctan2(filtered_segments_vectors[:, 1], filtered_segments_vectors[:, 0])
+    doubled_filtered_segments_angles_radiants = filtered_segments_angles_radiants * 2
+
+    filtered_segments_features = np.stack(
+        (np.cos(doubled_filtered_segments_angles_radiants), np.sin(doubled_filtered_segments_angles_radiants)), axis=1
+    ) """
+
+    labels = cluster_lines_kmeans(segments_features)
 
     # debug_line_angles(angles_radiants, labels)
-    # plot_vectors(segments_vectors, labels)
+    #plot_vectors(filtered_segments_features, labels)
 
     image_with_segments = draw_segments_extended_on_image(segments, img, labels, True)
     debug_image_cv2(image_with_segments)
 
+    line_coefficients = calculate_line_coefficients_from_segments(segments)
 
-def compute_with_hough(img):
+    return line_coefficients, labels
+
+
+def compute_lines_with_hough(img):
     # debug_image_cv2(img)
 
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -351,12 +376,14 @@ def compute_with_hough(img):
     labels = cluster_lines_kmeans(features)
     # debug_line_angles(angles_radiants, labels)
 
-    lines_on_image = draw_lines_on_image(lines, img, labels, True)
-    debug_image_cv2(lines_on_image)
+    #lines_on_image = draw_lines_on_image(lines, img, labels, True)
+    #debug_image_cv2(lines_on_image)
 
+    return lines, labels
 
 if __name__ == "__main__":
     image_path = os.path.abspath("data/chessred2k/images/0/G000_IMG005.jpg")
     img = cv2.imread(image_path)
-    compute_with_hough_p(img)
-    # compute_with_hough(img)
+    lines = compute_lines_with_hough_p(img)
+    #lines = compute_lines_with_hough(img)
+    
