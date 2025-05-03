@@ -50,3 +50,15 @@ Dublin City University, Dublin 9, Ireland
 {dganguly, jleveling, gjones}@computing.dcu.ie
 
 https://doras.dcu.ie/20378/1/ganguly-sigir2014.pdf
+
+oggi ci si é concentrati sulla definizione di una metrica di similaritá, di fatti fare un encoding naive della posizione in 8x8x6x2 non é particolarmente
+efficace poiché perde tutte le relazioni logiche della posizione che potrebbe aiutare a rendere simile la posizione ( es: attacco su una diagonale da parte di una regina o di un alfiere )
+
+il paper offre i seguenti punti chiavi per una similaritá della posizione
+    - posizione 
+    - activity
+    - attacking
+    - defending
+    - ray attacks
+
+to then construct an inverse index with the previous created tokens
