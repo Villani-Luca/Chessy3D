@@ -30,6 +30,6 @@ models/
 !models/.gitkeep
 
 # Visual studio
-/src/retrieval/extractfrompgn/.vs/
-/src/retrieval/extractfrompgn/obj/
-/src/retrieval/extractfrompgn/bin/
+.vs/
+obj/
+bin/
