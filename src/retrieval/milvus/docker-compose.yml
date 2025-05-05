@@ -67,7 +67,7 @@ networks:
 volumes:
   minio-data:
     driver: local
-    # driver_opts:
-    #   o: bind
-    #   type: xl
-    #   device: "${DOCKER_VOLUME_DIRECTORY:-.}/volumes/minio: /volumes/minio"
+    driver_opts:
+      type: none
+      o: bind
+      device: "${DOCKER_VOLUME_DIRECTORY:-.}/volumes/minio"

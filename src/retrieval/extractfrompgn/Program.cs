@@ -17,7 +17,7 @@ Log.Logger = new LoggerConfiguration()
 CoconaLiteApp.Run((
     string pgnfolder = """D:\Projects\Uni\Chessy3D\data\retrieval\lumbrasgigabase\splitted""", 
     string chromaurl = "http://localhost:8000", 
-    string sqliteconn = """Data Source=D:\Projects\Uni\Chessy3D\data\retrieval\sqlite.db;Pooling=True""",
+    string sqliteconn = """Host=localhost;Username=postgres;Password=password;Database=chessy""",
     bool clear_db = true,
     int max_file_record_size = 5000
     ) =>
@@ -26,13 +26,15 @@ CoconaLiteApp.Run((
 
     //using HttpClient httpClient = new HttpClient();
 
+    /*
     if(clear_db)
     {
-        using SqliteConnection sqliteConnection = SqliteConnectionFactory.CreateConnection(sqliteconn);
+        using var sqliteConnection = SqliteConnectionFactory.CreateConnection(sqliteconn);
         SqliteRepo sqliteRepo = new SqliteRepo(sqliteConnection);
         sqliteRepo.ClearTempTable();
         Log.Information("Cleared database.");
     }
+    */
 
     var dirinfo = new DirectoryInfo(pgnfolder);
     var filelist = dirinfo.GetFiles("*.pgn", SearchOption.TopDirectoryOnly);

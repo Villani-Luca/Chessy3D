@@ -1,10 +1,12 @@
+import numpy as np
 import pymilvus as milvus
 from pymilvus.bulk_writer import RemoteBulkWriter, BulkFileType
 
-COLLECTION_NAME = 'positions'
+NAIVE_COLLECTION_NAME = 'naive_embeddings'
+AE_COLLECTION_NAME = 'ae_embeddings'
 
 class MilvusRepository:
-    def __init__(self, url = 'http://localhost:19530', collection = COLLECTION_NAME):
+    def __init__(self, url = 'http://localhost:19530', collection = NAIVE_COLLECTION_NAME):
         """
         :param url: url to milvus, defaults to http://localhost:19530
         :param collection: collection name, defaults to 'positions'
@@ -16,7 +18,7 @@ class MilvusRepository:
     def load_collection(self):
         self.client.load_collection(self.collection)
 
-    def search_embeddings(self, embeddings: list[int] | list[list[int]], limit = 5):
+    def search_embeddings(self, embeddings: np.ndarray | list[np.ndarray], limit = 5):
         return self.client.search(collection_name=self.collection, data=embeddings, limit=limit)
         # TODO: convertire il risultato a qualcosa di piú facilmente utilizzabile
 
@@ -40,7 +42,8 @@ class MilvusBulkWriter:
                  bucket_name: str = 'a-bucket',
                  endpoint: str = 'localhost:9000',
                  secure: bool = False,
-                 collection = COLLECTION_NAME):
+                 remote_path: str = '/',
+                 collection = NAIVE_COLLECTION_NAME):
         """
         :param access_key: minio access key, defaults to 'minioadmin'
         :param secret_key: minio secret key, defaults to 'minioadmin'
@@ -57,10 +60,10 @@ class MilvusBulkWriter:
             bucket_name=bucket_name,
             secure=secure
         )
-        schema = MilvusSetup.milvus_collection_schema(collection)
-        self.writer = RemoteBulkWriter(schema=schema, remote_path='/', connect_param=conn, file_type=BulkFileType.PARQUET)
+        schema = MilvusSetup.milvus_naive_embedding() if collection == NAIVE_COLLECTION_NAME else MilvusSetup.milvus_ae_embedding()
+        self.writer = RemoteBulkWriter(schema=schema, remote_path=remote_path, connect_param=conn, file_type=BulkFileType.PARQUET)
 
-    def append(self, data: list[tuple[str, list[int]]]):
+    def append(self, data: list[tuple[str, np.ndarray]]):
         for item in data:
             self.writer.append_row({
                 'id': item[0],
@@ -75,9 +78,8 @@ class MilvusBulkWriter:
 
 class MilvusSetup:
     @staticmethod
-    def milvus_collection_schema(collection=COLLECTION_NAME, vector_size=768):
+    def milvus_naive_embedding(vector_size=768):
         """
-        :param collection: collection name, defaults to 'positions'
         :param vector_size: vector size, defaults to 768
         """
         schema = milvus.MilvusClient.create_schema(auto_id=False, enable_dynamic_field=False)
@@ -100,32 +102,76 @@ class MilvusSetup:
         return schema
 
     @staticmethod
-    def setup_milvus(reset=False, collection=COLLECTION_NAME, vector_size=768):
+    def milvus_ae_embedding(vector_size=768):
+        """
+        :param vector_size: vector size, defaults to 768
+        """
+        schema = milvus.MilvusClient.create_schema(auto_id=False, enable_dynamic_field=False)
+        schema.add_field(
+            field_name="id",
+            datatype=milvus.DataType.VARCHAR,
+            max_length=20,
+            # highlight-start
+            is_primary=True,
+            auto_id=False,
+            # highlight-end
+        )
+        schema.add_field(
+            field_name="vector",
+            datatype=milvus.DataType.FLOAT_VECTOR,
+            # highlight-next-line
+            dim=vector_size
+        )
+        schema.verify()
+        return schema
+
+    @staticmethod
+    def setup_milvus(reset=False):
         """
         :param reset: deletes <collection>, defaults to False
-        :param collection: collection name, defaults to 'positions'
         """
 
         mclient = milvus.MilvusClient()
 
-        if reset and mclient.has_collection(collection_name=collection):
-            mclient.drop_collection(collection_name=collection)
+        if reset:
+            if mclient.has_collection(collection_name=NAIVE_COLLECTION_NAME):
+                mclient.drop_collection(collection_name=NAIVE_COLLECTION_NAME)
 
-        schema = MilvusSetup.milvus_collection_schema(collection, vector_size)
-        mclient.create_collection(collection_name=collection, schema=schema)
+            if mclient.has_collection(collection_name=AE_COLLECTION_NAME):
+                mclient.drop_collection(collection_name=AE_COLLECTION_NAME)
+
+
+        mclient.create_collection(collection_name=NAIVE_COLLECTION_NAME, schema=MilvusSetup.milvus_naive_embedding())
+        mclient.create_collection(collection_name=AE_COLLECTION_NAME, schema=MilvusSetup.milvus_ae_embedding())
+
+        naive_index_params = milvus.MilvusClient.prepare_index_params()
+        naive_index_params.add_index(
+            field_name="vector",
+            metric_type="COSINE",
+            index_type="IVF_FLAT",
+            index_name="naive_vector_index",
+            params={"nlist": 128}
+        )
+
+        # 4.3. Create an index file
+        mclient.create_index(
+            collection_name=NAIVE_COLLECTION_NAME,
+            index_params=naive_index_params,
+            sync=False  # Whether to wait for index creation to complete before returning. Defaults to True.
+        )
 
         index_params = milvus.MilvusClient.prepare_index_params()
         index_params.add_index(
             field_name="vector",
             metric_type="COSINE",
             index_type="IVF_FLAT",
-            index_name="vector_index",
+            index_name="ae_vector_index",
             params={"nlist": 128}
         )
 
         # 4.3. Create an index file
         mclient.create_index(
-            collection_name=collection,
+            collection_name=AE_COLLECTION_NAME,
             index_params=index_params,
             sync=False  # Whether to wait for index creation to complete before returning. Defaults to True.
         )

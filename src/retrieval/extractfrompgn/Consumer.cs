@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.Sqlite;
+using Npgsql;
 using prep;
 using prep.repo;
 using Serilog;
@@ -17,14 +18,13 @@ internal class ParseResultConsumer : IDisposable
     private readonly int _threadId;
     private readonly ConcurrentQueue<ParseResultJIT> _queue;
     private readonly CancellationToken _token;
-    private readonly SqliteConnection _sqliteConnection;
-    private readonly SqliteAddParseResultJITCommand _command;
-    //private readonly SqliteRepo _sqliteRepo;
+    private readonly NpgsqlConnection _conn;
+    private readonly PgAddParseResultJITCommand _command;
 
     public void Dispose()
     {
         _command.Dispose();
-        _sqliteConnection.Dispose();
+        _conn.Dispose();
     }
 
     public static void ThreadConsumerFunc(object? data)
@@ -32,15 +32,17 @@ internal class ParseResultConsumer : IDisposable
         if (data is not ConsumerThreadParams p)
             return;
 
-        var connection = SqliteConnectionFactory.CreateConnection(p.ConnectionString);
-        var consumer = new ParseResultConsumer(p.Queue, p.Token, connection, p.ThreadId);
+        var datasource = PgConnectionFactory.CreateConnection(p.ConnectionString);
+        var conn = datasource.OpenConnection();
+
+        var consumer = new ParseResultConsumer(p.Queue, p.Token, conn, p.ThreadId);
         consumer.Consume();
     }
 
     public ParseResultConsumer(
         ConcurrentQueue<ParseResultJIT> queue, 
         CancellationToken token,
-        SqliteConnection conn,
+        NpgsqlConnection conn,
         int threadId = 0
     //SqliteRepo repo
     )
@@ -48,21 +50,21 @@ internal class ParseResultConsumer : IDisposable
         // Initialize the consumer
         _queue = queue;
         _token = token;
-        _sqliteConnection = conn;
+        _conn = conn;
 
-        _command = SqliteAddParseResultJITCommand.Create(_sqliteConnection);
+        _command = PgAddParseResultJITCommand.Create(_conn);
         _threadId = threadId;
      }
 
-    private SqliteTransaction EnsureTransaction()
+    private NpgsqlTransaction EnsureTransaction()
     {
         while (true)
         {
             try
             {
-                return _sqliteConnection.BeginTransaction();
+                return _conn.BeginTransaction();
             }
-            catch(SqliteException ex)
+            catch(NpgsqlException ex)
             {
                 Log.Error(ex, "Error creating transaction: {message}", ex.Message);
                 Thread.Sleep(100);

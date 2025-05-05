@@ -62,3 +62,6 @@ il paper offre i seguenti punti chiavi per una similaritá della posizione
     - ray attacks
 
 to then construct an inverse index with the previous created tokens
+
+# 05/05/2025
+praticamente tutto il tempo é stato usato per caricare e creare i vettori dentro milvus, problemi con chroma per lentezza.

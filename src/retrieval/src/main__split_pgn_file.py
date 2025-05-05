@@ -1,3 +1,8 @@
+'''
+splits pgn files in multiple for easiser processing
+'''
+
+
 import os
 import pathlib
 
