@@ -61,6 +61,12 @@ class PgGamesRepository:
             prepare=True
         ).fetchall()
 
+    def get_games_from_move(self, move_id: str, limit = 5):
+        return self.conn.cursor.execute(
+            """SELECT g.* FROM games g JOIN moves m ON g.id = m.gameid WHERE m.embeddingid = %s LIMIT %s""",
+            (move_id,limit)
+        ).fetchall()
+
     def delete_game(self, gameid: int):
         self.conn.cursor.execute("""DELETE FROM games WHERE id = %s""", (gameid,))
 

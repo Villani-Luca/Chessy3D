@@ -34,17 +34,14 @@ class NaivePositionEmbedder(PositionEmbedder):
         self.EMBEDDING_SIZE = 768
 
     def embedding(self, board: chess.Board) -> np.ndarray:
-        tensor = self.create_empty_embedding()
+        arr = self.create_empty_embedding()
         for square in chess.SQUARES:
             piece = board.piece_at(square)
             if piece:
-                rank = chess.square_rank(square)
-                file = chess.square_file(square)
-                piece_index = PIECE_TO_INDEX[piece.piece_type] + 6 if piece.color == chess.BLACK else 0
-                tensor[rank, file, piece_index] = 1
+                computed_index = self._compute_index(square, piece)
+                arr[computed_index] = 1
 
-        # TODO: capire in che modo viene flattened ( cosa si trova dove )
-        return tensor.flatten().tolist()
+        return arr
 
     @staticmethod
     def _compute_index(square: chess.Square, piece: chess.Piece):

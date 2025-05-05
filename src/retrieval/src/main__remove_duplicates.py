@@ -18,5 +18,5 @@ if __name__ == '__main__':
 
 
     for index, chunk in enumerate(np.array_split(dt, dt.shape[0] // OUTPUT_BATCH_SIZE)):
-        pd.DataFrame(chunk).to_parquet((PARQUEET_OUT_FOLDER / f'_{index + 1}.parquet'))
+        pd.DataFrame(chunk).to_parquet((PARQUEET_OUT_FOLDER / f'_{index + 1}.parquet'), index=False)
 

@@ -19,8 +19,14 @@ class MilvusRepository:
         self.client.load_collection(self.collection)
 
     def search_embeddings(self, embeddings: np.ndarray | list[np.ndarray], limit = 5):
-        return self.client.search(collection_name=self.collection, data=embeddings, limit=limit)
-        # TODO: convertire il risultato a qualcosa di piú facilmente utilizzabile
+        data = [x.tolist() for x in ([embeddings] if isinstance(embeddings, np.ndarray) else embeddings)]
+
+        return self.client.search(
+            collection_name=self.collection,
+            data=data,
+            limit=limit,
+            anns_field="vector",
+        )
 
     def get_embedding(self, ids: list[str]):
         return self.client.get(
