@@ -1,6 +1,6 @@
 import numpy as np
 import pymilvus as milvus
-from pymilvus.bulk_writer import RemoteBulkWriter, BulkFileType
+from pymilvus.bulk_writer import LocalBulkWriter, BulkFileType
 
 NAIVE_COLLECTION_NAME = 'naive_embeddings'
 AE_COLLECTION_NAME = 'ae_embeddings'
@@ -40,15 +40,10 @@ class MilvusRepository:
 
 
 class MilvusBulkWriter:
-    writer: RemoteBulkWriter
+    writer: LocalBulkWriter
 
     def __init__(self,
-                 access_key: str = 'minioadmin',
-                 secret_key: str = 'minioadmin',
-                 bucket_name: str = 'a-bucket',
-                 endpoint: str = 'localhost:9000',
-                 secure: bool = False,
-                 remote_path: str = '/',
+                 local_path: str = '/',
                  collection = NAIVE_COLLECTION_NAME):
         """
         :param access_key: minio access key, defaults to 'minioadmin'
@@ -59,15 +54,8 @@ class MilvusBulkWriter:
         :param collection: collection name, defaults to 'positions'
         """
 
-        conn  = RemoteBulkWriter.S3ConnectParam(
-            endpoint=endpoint,
-            access_key=access_key,
-            secret_key=secret_key,
-            bucket_name=bucket_name,
-            secure=secure
-        )
         schema = MilvusSetup.milvus_naive_embedding() if collection == NAIVE_COLLECTION_NAME else MilvusSetup.milvus_ae_embedding()
-        self.writer = RemoteBulkWriter(schema=schema, remote_path=remote_path, connect_param=conn, file_type=BulkFileType.PARQUET)
+        self.writer = LocalBulkWriter(schema=schema, local_path=local_path, file_type=BulkFileType.PARQUET, chunk_size=512*1024*1024)
 
     def append(self, data: list[tuple[str, np.ndarray]]):
         for item in data:

@@ -11,24 +11,24 @@ import chess.polyglot
 import numpy as np
 from numpy import ndarray
 
-from src.retrieval.src.main__load_milvus__process import STARTING_ID
 from src.retrieval.src.milvus import MilvusBulkWriter, MilvusSetup
 from src.retrieval.src.model.pgsql import Connection, PgGamesRepository, PgMovesRepository
 from src.retrieval.src.position_embeddings import PositionEmbedder, NaivePositionEmbedder
 
 ROOT = pathlib.Path.cwd().parent.parent.parent
-MINIO_FILES_TEMP = (ROOT / 'minio.txt')
-BULK_WRITER_TEMP_PATH = (ROOT / 'data/retrieval')
-PG_CONN = "host=localhost user=postgres password=password dbname=chessy"
+MINIO_FILES_TEMP = (ROOT / r'minio.txt')
+BULK_WRITER_TEMP_PATH = pathlib.Path(r'E:\temp')
+PG_CONN = r"host=localhost user=postgres password=password dbname=chessy"
 
 SAN_MOVE_REGEX = r'(?:\d+\.)?([KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?|O-O(?:-O)?)[+#]?'
 #STARTING_ID = 22_473_248 # primo id
 #N_RECORDS = 15_000_000 # ACTUAL: 14966038
-STARTING_ID = 22_473_248
-N_RECORDS = 14_500_000
+STARTING_ID = 0
+#N_RECORDS = 14_600_000
+N_RECORDS = 5_000_000
 PRODUCERS_NUMBER = 10
-CONSUMERS_NUMBER = 1
-DISABLE_SQL = True
+CONSUMERS_NUMBER = 5
+DISABLE_SQL = False
 
 ##### Concurrent tasks #####
 class WorkerOutput:
@@ -66,7 +66,7 @@ def worker(
     print(f'[WORKER] {worker_id} starting {starting_id} {nrecords} {maxsentileid}')
 
     while True:
-        data = games_repo.get_games_moves(current_id, maxsentileid=maxsentileid, limit=1_000)
+        data = games_repo.get_games_moves(current_id, maxsentileid=maxsentileid, limit=500)
         if len(data) == 0:
             break
 
@@ -136,6 +136,7 @@ class Consumer:
     saved_games: int
     sqlite_time: float
     milvus_time: float
+    saved_batches: int
 
     def __init__(self, thread_id: int, q: multiprocessing.JoinableQueue, e: multiprocessing.Event):
         self.thread_id = thread_id
@@ -152,11 +153,14 @@ class Consumer:
             print(f'[SAVER {self.thread_id}] Empty batch')
             return
 
+        self.saved_batches += 1
         start_time = time.time()
 
         # milvus commit
         self.milvus_writer.append(list(self.milvus_current_batch.items()))
-        self.milvus_writer.commit()
+
+        if self.saved_batches % 400 == 0:
+            self.milvus_writer.commit()
 
         milvus_time = time.time()
 
@@ -226,8 +230,8 @@ class Consumer:
             self.dbconn.close()
 
     def setup(self):
-        self.milvus_writer = MilvusBulkWriter(remote_path=f'/{self.thread_id}/')
-        self.max_batch_size = 10000
+        self.milvus_writer = MilvusBulkWriter(local_path=BULK_WRITER_TEMP_PATH.as_posix())
+        self.max_batch_size = 2_500
 
         if not DISABLE_SQL:
             self.dbconn = Connection(PG_CONN)
@@ -241,13 +245,14 @@ class Consumer:
         self.saved_games = 0
         self.sqlite_time = 0
         self.milvus_time = 0
+        self.saved_batches = 0
 
         self.saver()
 
 
 if __name__ == '__main__':
     ##### Dependency injection dei poveri #####
-    MilvusSetup.setup_milvus(reset=False)
+    # MilvusSetup.setup_milvus(reset=False)
 
     # position encoder
     position_embedder = NaivePositionEmbedder()

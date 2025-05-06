@@ -38,12 +38,17 @@ class PgMovesRepository:
         '''
         necessitá del commit subito dopo
         '''
-        self.conn.cursor.execute("""CREATE TEMPORARY TABLE temp_moves ON COMMIT DROP AS SELECT * from moves LIMIT 0""")
-        with self.conn.cursor.copy("""COPY temp_moves (gameid, embeddingid) FROM STDIN (FORMAT BINARY)""") as copy:
+        if(len(moves) == 0):
+            return
+
+        self.conn.cursor.execute("""CREATE TEMPORARY TABLE temp_moves AS SELECT * from moves LIMIT 0""")
+        #with self.conn.cursor.copy("""COPY temp_moves (gameid, embeddingid) FROM STDIN (FORMAT BINARY)""") as copy:
+        with self.conn.cursor.copy("""COPY temp_moves (gameid, embeddingid) FROM STDIN""") as copy:
             for move in moves:
                 copy.write_row(move)
 
         self.conn.cursor.execute("""INSERT INTO moves (gameid, embeddingid) SELECT gameid, embeddingid FROM temp_moves ON CONFLICT DO NOTHING""")
+        self.conn.cursor.execute("""DROP TABLE temp_moves""")
 
 class PgGamesRepository:
     conn: Connection = None

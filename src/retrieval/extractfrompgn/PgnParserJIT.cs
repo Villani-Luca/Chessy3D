@@ -126,7 +126,14 @@ internal class PgnParserJIT
 
                 result.Moves = moves;
 
-                queue.Enqueue(result); 
+                // la graffa é un indicatore che c'é un formato piú complesso di mosse a cui non siamo interessati, uguale per i 3 punti ( indicano delle varianti / linee alternative ) 
+                // se presenti non vogliamo salvarli
+                if (!result.Moves.Contains('{') && !result.Moves.Contains("...")) 
+                {
+                    queue.Enqueue(result); 
+                }
+
+                result = new ParseResultJIT();
             }
         } while (!exit && enumerator.MoveNext());
     }

@@ -63,12 +63,6 @@ CoconaLiteApp.Run((
     };
     Parallel.ForEach(ordered, options, (pgnfile, _, batch) =>
     {
-        var split = pgnfile.Name.Split('_');
-        if (split.Length < 3 || !int.TryParse(split[2], out var max_allocation))
-        {
-            max_allocation = max_file_record_size;
-        }
-
         string pgnfileContent = File.ReadAllText(pgnfile.FullName);
         PgnParserJIT.Parse(pgnfileContent, queue);
 
