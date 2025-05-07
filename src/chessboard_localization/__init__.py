@@ -5,22 +5,23 @@ import numpy as np
 from sklearn.cluster import AgglomerativeClustering, KMeans, DBSCAN
 import pyautogui
 
-import matplotlib.pyplot as plt
-import matplotlib.cm as cms
-
 
 class ChessboardDetector:
     original_image: cv2.typing.MatLike
     processed_image: cv2.typing.MatLike
     edges_image: cv2.typing.MatLike
+    segments_image: cv2.typing.MatLike
     lines_image: cv2.typing.MatLike
     clustered_lines_image: cv2.typing.MatLike
     clustered_lines_filtered_image: cv2.typing.MatLike
     intersections_image: cv2.typing.MatLike
+    filtered_intersections_image: cv2.typing.MatLike
 
     lines_angles = None
     line_segments = None
     lines_labels = None
+    intersections_matrix = None
+    filtered_intersection_points = None
 
     filtered_line_segments = None
     filtered_line_labels = None
@@ -28,50 +29,67 @@ class ChessboardDetector:
     def __init__(self, img):
         self.original_image = img
 
+    # TODO: define image size dependant parameters (multi scale processing)
+    # alternatively run the processing many times with different parameters and take the best/merge the results
+
     def process(self):
         self.__apply_image_processing()
         self.__detect_edges()
         self.__detect_lines()
         self.__classify_lines()
-        #self.__filter_lines_duplicates()
-        self.__find_all_intersections2()
+        # self.__filter_lines_duplicates()
+        self.__find_line_intersections()
+        self.__filter_duplicate_intersection_points()
 
-        #print(self.lines_angles)
-        #print(self.line_segments)
-        #print(self.lines_labels)
+        # print(self.lines_angles)
+        # print(self.line_segments)
+        # print(self.lines_labels)
 
-        #self.__debug_image_cv2(self.original_image)
-        #self.__debug_image_cv2(self.processed_image)
-        #self.__debug_image_cv2(self.edges_image)
-        #self.__debug_image_cv2(self.lines_image)
-        #self.__debug_image_cv2(self.clustered_lines_image)
-        #self.__debug_image_cv2(self.clustered_lines_filtered_image)
-        self.__debug_image_cv2(self.intersections_image)
+        # self.__debug_image_cv2(self.original_image)
+        # self.__debug_image_cv2(self.processed_image)
+        # self.__debug_image_cv2(self.edges_image)
+        # self.__debug_image_cv2(self.segments_image)
+        # self.__debug_image_cv2(self.lines_image)
+        # self.__debug_image_cv2(self.clustered_lines_image)
+        # self.__debug_image_cv2(self.clustered_lines_filtered_image)
+        # self.__debug_image_cv2(self.intersections_image)
+        self.__debug_image_cv2(self.filtered_intersections_image)
 
-        #debug_line_angles(angles_radiants, labels)
-        #plot_vectors(filtered_segments_features, labels)
+        # debug_line_angles(angles_radiants, labels)
+        # plot_vectors(filtered_segments_features, labels)
 
     def __apply_image_processing(self):
 
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-        blurred = cv2.GaussianBlur(
+        gaussian = cv2.GaussianBlur(
             gray,
-            ksize=(15, 15),  # kernel size -> since the image is big this must be big
-            sigmaX=3,  # horizontal blur intensity
-            sigmaY=3,  # vertical blur intensity
+            ksize=(7, 7),  # kernel size -> since the image is big this must be big
+            sigmaX=1.5,  # horizontal blur intensity
+            sigmaY=1.5,  # vertical blur intensity
         )
 
-        self.processed_image = blurred
+        # bilateral = cv2.bilateralFilter(gray, 9, 75, 75)
+
+        self.processed_image = gaussian
 
     def __detect_edges(self):
-        self.edges_image = cv2.Canny(
+        canny = cv2.Canny(
             self.processed_image,
             threshold1=50,  # lower hysteresis threshold
-            threshold2=100,  # upper hysteresis threshold,
+            threshold2=150,  # upper hysteresis threshold,
             apertureSize=3,  # sobel kernel size
             L2gradient=True,  # false = l1 norm (faster), true = l2 norm (more accurate)
         )
+
+        dilated_edges = cv2.dilate(canny, np.ones((5, 5), np.uint8), iterations=1)
+
+        # This is a dilation followed by an erosion
+        # closed_edges = cv2.morphologyEx(
+        #    canny, cv2.MORPH_CLOSE, np.ones((5, 5), np.uint8)
+        # )
+
+        self.edges_image = dilated_edges
 
     def __detect_lines(self):
         hough_segments = cv2.HoughLinesP(  # Probabilistic Hough Transform (PHT)
@@ -80,20 +98,33 @@ class ChessboardDetector:
             theta=math.pi
             / 180,  # 1 degree resolution (in radiants) -> this is usually fine
             threshold=100,  # lower = detect more lines (including noise), higher = keep only clear lines
-            minLineLength=100,  # lower = detect short and fragmented lines, higher = discard short and fragmented lines
-            maxLineGap=20,  # lower = close lines are considered separated, higher = close lines are considered the same (merged)
+            minLineLength=200,  # lower = detect short and fragmented lines, higher = discard short and fragmented lines
+            maxLineGap=10,  # lower = close lines are merged, higher = close lines are considered separate
         )
 
         segments = np.array(hough_segments).squeeze()
-        segments_vectors = self.__calculate_normalized_vectors_from_segments(segments)
 
-        # these are between [-π, π]
-        self.lines_angles = np.arctan2(segments_vectors[:, 1], segments_vectors[:, 0])
+        self.segments_image = self.__draw_segments_on_image(
+            segments, self.original_image
+        )
+
+        x1 = segments[:, 0]
+        y1 = segments[:, 1]
+        x2 = segments[:, 2]
+        y2 = segments[:, 3]
+
+        dx = x2 - x1
+        dy = y2 - y1
+
+        # angles between [-π, π]
+        self.lines_angles = np.arctan2(dy, dx)
 
         img_height, img_width = self.original_image.shape[:2]
+
         self.line_segments = self.__extend_segments_size(
             segments, img_height, img_width
         )
+
         self.lines_image = self.__draw_segments_on_image(
             self.line_segments, self.original_image
         )
@@ -118,6 +149,8 @@ class ChessboardDetector:
         )
 
     def __classify_lines(self):
+
+        # transformation used to made sure all multiple of π (including 0) are treated as the same angle but still keeping the separation between the other angles
         doubled_line_angles = self.lines_angles * 2
 
         features = np.stack(
@@ -131,6 +164,8 @@ class ChessboardDetector:
         )
 
     def __classify_lines_alt(self):
+
+        # transformation used to made sure all multiple of π (including 0) are treated as the same angle but still keeping the separation between the other angles
         doubled_line_angles = self.lines_angles * 2
 
         features = np.stack(
@@ -185,101 +220,80 @@ class ChessboardDetector:
             self.filtered_line_labels,
         )
 
-    def __find_lines_intersections(self):
-        segments_line_equation = self.__calculate_line_equation_from_segments(
-            self.line_segments
-        )
-
-        N = len(self.line_segments)
-        intersection_matrix = np.full((N, N, 2), np.nan)
-
-        self.intersections_image = self.clustered_lines_image.copy()
-        img_height, img_width = self.intersections_image.shape[:2]
-
-        for i in range(N):
-            for j in range(N):
-                if self.lines_labels[i] == self.lines_labels[j]:
-                    continue
-
-                A1, B1, C1 = segments_line_equation[i]
-                A2, B2, C2 = segments_line_equation[j]
-
-                det = A1 * B2 - A2 * B1
-
-                if abs(det) < 1e-6:
-                    continue
-
-                x = (B2 * C1 - B1 * C2) / det
-                y = (A1 * C2 - A2 * C1) / det
-
-                x = np.clip(round(x), 0, img_width - 1)
-                y = np.clip(round(y), 0, img_height - 1)
-                intersection_matrix[i, j] = [x, y]
-
-        #print(intersection_matrix)
-        
-        for i in range(intersection_matrix.shape[0]):
-            for j in range(intersection_matrix.shape[1]):
-                if not np.isnan(intersection_matrix[i, j, 0]):
-                    x, y = intersection_matrix[i, j]
-                    x_pixel = int(x)
-                    y_pixel = int(y)
-                    cv2.circle(
-                        self.intersections_image,
-                        (x_pixel, y_pixel),
-                        20,
-                        (0, 255, 0),
-                        -1,
-                    )
-
-    def  __find_all_intersections2(self):
+    def __find_line_intersections(self):
 
         segments = self.line_segments
         labels = self.lines_labels
 
-        #segments = self.filtered_line_segments
-        #labels = self.filtered_line_labels
+        hesse_normal_lines = self.__segments_to_hesse_normal_lines(segments)
 
-        self.intersections_image = self.clustered_lines_image.copy()
-        img_height, img_width = self.intersections_image.shape[:2]
-        
         N = len(segments)
-        intersections = np.full((N, N, 2), np.nan)
-        unique_points = set()
-        
-        # Precompute Hesse normal forms
-        hesse_lines = [self.__segment_to_hesse_normal(seg) for seg in segments]
-        
-        for i in range(N):
-            for j in range(i+1, N):
 
+        # Using dense matrix even if this can be optimized with a sparse matrix
+        intersections_matrix = np.full((N, N, 2), np.nan)
+        img_height, img_width = self.original_image.shape[:2]
+
+        for i in range(N):
+            for j in range(i + 1, N):
+
+                # Only check the intersections between lines belonging to different clusters
+                # (vertical-ish lines vs horizontal-ish lines)
                 if labels[i] == labels[j]:
                     continue
 
-                pt = self.__intersect_hesse_lines(hesse_lines[i], hesse_lines[j], img_height, img_width)
+                pt = self.__intersect_hesse_lines(
+                    hesse_normal_lines[i], hesse_normal_lines[j], img_height, img_width
+                )
+
+                # Store intersection points only when results are found
                 if pt is not None:
                     x, y = pt
-                    intersections[i,j] = [x, y]
-                    intersections[j,i] = [x, y]  # Symmetric
-                    unique_points.add((x, y))
-        
-        for i in range(intersections.shape[0]):
-            for j in range(intersections.shape[1]):
-                if not np.isnan(intersections[i, j, 0]):
-                    x, y = intersections[i, j]
-                    x_pixel = int(x)
-                    y_pixel = int(y)
-                    cv2.circle(
-                        self.intersections_image,
-                        (x_pixel, y_pixel),
-                        5,
-                        (0, 255, 0),
-                        -1,
-                    )
+
+                    # the matrix is symmetric
+                    intersections_matrix[i, j] = [x, y]
+                    intersections_matrix[j, i] = [x, y]
+
+        self.intersections_matrix = intersections_matrix
+
+        self.intersections_image = self.__draw_intersection_points(
+            intersections_matrix, self.clustered_lines_image
+        )
+
+    def __filter_duplicate_intersection_points(self):
+
+        # Flatten the matrix
+        intersections_matrix_flattened = self.intersections_matrix.reshape(-1, 2)
+
+        # Remove nans
+        nan_filter_mask = ~np.isnan(intersections_matrix_flattened).any(axis=1)
+        points = intersections_matrix_flattened[nan_filter_mask]
+
+        # Since the intersection matrix is symmetrical, remove the duplicates
+        unique_points = np.unique(points, axis=0)
+
+        print(f"points before filtering: {len(unique_points)}")
+
+        clustering = DBSCAN(eps=1, min_samples=1).fit(unique_points)
+        unique_labels = np.unique(clustering.labels_)
+        centers = np.array(
+            [
+                unique_points[clustering.labels_ == label].mean(axis=0)
+                for label in unique_labels
+            ]
+        )
+
+        print(f"points after filtering: {len(centers)}")
+
+        self.filtered_points = centers
+        self.filtered_intersections_image = self.__draw_points(
+            self.filtered_points, self.original_image
+        )
 
     # ----------------------------------------------------------
 
-    def __debug_image_cv2(self, img: cv2.typing.MatLike, max_height=800, max_width=800):
+    def __debug_image_cv2(
+        self, img: cv2.typing.MatLike, max_height=1024, max_width=1024
+    ):
 
         window_name = "Debug"
 
@@ -307,25 +321,6 @@ class ChessboardDetector:
         cv2.waitKey(0)
         cv2.destroyWindow(window_name)
 
-    def __calculate_normalized_vectors_from_segments(self, segments):
-        x1 = segments[:, 0]
-        y1 = segments[:, 1]
-        x2 = segments[:, 2]
-        y2 = segments[:, 3]
-
-        dx = x2 - x1
-        dy = y2 - y1
-
-        norm = np.sqrt(dx**2 + dy**2)
-
-        # this is used to avoid divisions by 0
-        norm[norm == 0] = 1e-8
-
-        normalized_dx = dx / norm
-        normalized_dy = dy / norm
-
-        return np.stack((normalized_dx, normalized_dy), axis=1)
-
     def __calculate_line_slope_intercept_from_segments(self, segments):
         x1 = segments[:, 0]
         y1 = segments[:, 1]
@@ -335,22 +330,22 @@ class ChessboardDetector:
         dx = x2 - x1
         dy = y2 - y1
 
-        line_coeffiecients = np.zeros((len(segments), 2))
+        line_coefficients = np.zeros((len(segments), 2))
 
-        vertical_mask = np.isclose(dx, 0, atol=1e-8)
+        vertical_mask = np.isclose(x1, x2)
         non_vertical_mask = ~vertical_mask
 
         if np.any(non_vertical_mask):
             m = dy[non_vertical_mask] / dx[non_vertical_mask]
             q = y1[non_vertical_mask] - m * x1[non_vertical_mask]
-            line_coeffiecients[non_vertical_mask, 0] = m
-            line_coeffiecients[non_vertical_mask, 1] = q
+            line_coefficients[non_vertical_mask, 0] = m
+            line_coefficients[non_vertical_mask, 1] = q
 
         if np.any(vertical_mask):
-            line_coeffiecients[vertical_mask, 0] = np.inf
-            line_coeffiecients[vertical_mask, 1] = x1[vertical_mask]
+            line_coefficients[vertical_mask, 0] = np.inf
+            line_coefficients[vertical_mask, 1] = x1[vertical_mask]
 
-        return line_coeffiecients
+        return line_coefficients
 
     def __calculate_line_equation_from_segments(self, segments):
         x1 = segments[:, 0]
@@ -364,54 +359,73 @@ class ChessboardDetector:
 
         return np.stack((A, B, C), axis=1)
 
-    def __segment_to_hesse_normal(self, segment):
+    def __segments_to_hesse_normal_lines(self, segments):
 
-        x1, y1, x2, y2 = segment
-        
-        # Handle vertical segments (x1 == x2)
-        if np.isclose(x1, x2):
-            theta = np.pi/2  # 90 degrees (normal to vertical line)
-            rho = x1  # Distance from origin along x-axis
-        else:
-            # Standard line: Ax + By + C = 0
+        hesse_normal_lines = np.zeros((len(segments), 2))
+
+        x1 = segments[:, 0]
+        x2 = segments[:, 2]
+        y1 = segments[:, 1]
+        y2 = segments[:, 3]
+
+        vertical_mask = np.isclose(x1, x2)
+        non_vertical_mask = ~vertical_mask
+
+        if np.any(non_vertical_mask):
             A = y2 - y1
             B = x1 - x2
-            C = x2*y1 - x1*y2
-            
-            # Convert to Hesse normal form
+            C = x2 * y1 - x1 * y2
+
             norm = np.sqrt(A**2 + B**2)
-            rho = -C / norm  # Perpendicular distance from origin
-            theta = np.arctan2(B, A)  # Angle of normal vector
-        
-        return rho, theta
+            rho = -C / norm
+            theta = np.arctan2(B, A)
+
+            hesse_normal_lines[non_vertical_mask, 0] = rho
+            hesse_normal_lines[non_vertical_mask, 1] = theta
+
+        if np.any(vertical_mask):
+            theta = np.pi / 2
+            rho = x1
+            hesse_normal_lines[non_vertical_mask, 0] = rho
+            hesse_normal_lines[non_vertical_mask, 1] = theta
+
+        return hesse_normal_lines
 
     def __intersect_hesse_lines(self, line1, line2, img_height, img_width):
+
         rho1, theta1 = line1
         rho2, theta2 = line2
-        
-        # Check if lines are parallel (no intersection)
-        if np.isclose(np.abs(theta1 - theta2), 0, atol=1e-6) or \
-        np.isclose(np.abs(theta1 - theta2), np.pi, atol=1e-6):
+
+        cos1, sin1 = np.cos(theta1), np.sin(theta1)
+        cos2, sin2 = np.cos(theta2), np.sin(theta2)
+
+        # this is a cross product
+        det = cos1 * sin2 - cos2 * sin1
+
+        # Skip if there are no intersection (parallel lines)
+        if np.isclose(det, 0, atol=1e-8):
             return None
-        
-        # Solve intersection
-        A = np.array([
-            [np.cos(theta1), np.sin(theta1)],
-            [np.cos(theta2), np.sin(theta2)]
-        ])
+
+        # Solving the linear system to find the intersection point
+        A = np.array([[cos1, sin1], [cos2, sin2]])
         b = np.array([[rho1], [rho2]])
-        
+
         try:
             x, y = np.linalg.solve(A, b)
-            # Clip to image bounds
-            x = np.clip(int(np.round(x)), 0, img_width - 1)
-            y = np.clip(int(np.round(y)), 0, img_height - 1)
-            return (x, y)
         except np.linalg.LinAlgError:
-            return None  # Parallel case (should be caught above)
+            return None
 
+        x = int(np.round(x.item()))
+        y = int(np.round(y.item()))
+
+        # Drop points located outside the image
+        if x < 0 or x >= img_width or y < 0 or y >= img_height:
+            return None
+
+        return (x, y)
 
     def __create_segments_from_lines(self, lines, segment_length=10000):
+
         segments = np.zeros((lines.shape[0], 4), dtype=np.int32)
 
         for index, line in enumerate(lines):
@@ -502,17 +516,48 @@ class ChessboardDetector:
 
         for index, segment in enumerate(segments):
             x1, y1, x2, y2 = segment
-            color = (0, 255, 0)
+            color = (255, 0, 0)
 
             if labels is not None:
                 if labels[index] == 0:
-                    color = (255, 0, 0)
-                else:
                     color = (0, 0, 255)
 
             cv2.line(segment_img, pt1=(x1, y1), pt2=(x2, y2), color=color, thickness=4)
 
         return segment_img
+
+    def __draw_intersection_points(self, intersections_matrix, img: cv2.typing.MatLike):
+
+        # Flatten the matrix
+        intersections_matrix_flattened = intersections_matrix.reshape(-1, 2)
+
+        # Remove nans
+        nan_filter_mask = ~np.isnan(intersections_matrix_flattened).any(axis=1)
+        points = intersections_matrix_flattened[nan_filter_mask]
+
+        # Since the intersection matrix is symmetrical, remove the duplicates
+        unique_points = np.unique(points, axis=0)
+
+        return self.__draw_points(unique_points, img)
+
+    def __draw_points(self, points, img: cv2.typing.MatLike):
+
+        img_copy = img.copy()
+
+        for p in points:
+            x, y = p
+            x_pixel = int(x)
+            y_pixel = int(y)
+
+            cv2.circle(
+                img_copy,
+                (x_pixel, y_pixel),
+                5,
+                (0, 255, 0),
+                -1,
+            )
+
+        return img_copy
 
     def __calculate_segments_distance_matrix(self, segments):
         n = segments.shape[0]
@@ -548,88 +593,45 @@ class ChessboardDetector:
         n = len(segments)
         distance_matrix = np.zeros((n, n))
         line_equations = self.__calculate_line_equation_from_segments(segments)
-        
+
         # Precompute midpoints
         midpoints = (segments[:, :2] + segments[:, 2:]) / 2
-        
+
         for i in range(n):
             A1, B1, C1 = line_equations[i]
             norm1 = np.sqrt(A1**2 + B1**2 + 1e-10)
-            
+
             for j in range(i + 1, n):
                 A2, B2, C2 = line_equations[j]
                 norm2 = np.sqrt(A2**2 + B2**2 + 1e-10)
-                
+
                 # --- 1. Perpendicular Distance ---
                 # Distance from line i to midpoint of j
-                d_i_to_j = np.abs(A1 * midpoints[j, 0] + B1 * midpoints[j, 1] + C1) / norm1
+                d_i_to_j = (
+                    np.abs(A1 * midpoints[j, 0] + B1 * midpoints[j, 1] + C1) / norm1
+                )
                 # Distance from line j to midpoint of i
-                d_j_to_i = np.abs(A2 * midpoints[i, 0] + B2 * midpoints[i, 1] + C2) / norm2
+                d_j_to_i = (
+                    np.abs(A2 * midpoints[i, 0] + B2 * midpoints[i, 1] + C2) / norm2
+                )
                 avg_lateral_dist = (d_i_to_j + d_j_to_i) / 2
-                
+
                 # --- 2. Angular Penalty ---
-                cos_theta = (A1*A2 + B1*B2) / (norm1 * norm2)
+                cos_theta = (A1 * A2 + B1 * B2) / (norm1 * norm2)
                 theta = np.arccos(np.clip(cos_theta, -1, 1))  # Angle in radians
                 angle_penalty = np.sin(theta)  # Penalize deviation from parallel
-                
+
                 # --- Combine Metrics ---
                 hybrid_distance = avg_lateral_dist * (1 + angle_penalty)
                 distance_matrix[i, j] = distance_matrix[j, i] = hybrid_distance
-        
+
         return distance_matrix
-
-    def __debug_line_angles(self, angles, labels=None):
-        if labels is None:
-            colors = None
-        else:
-            colors = ["red" if label == 0 else "blue" for label in labels]
-
-        plt.scatter(angles, np.zeros_like(angles), c=colors)
-        plt.xlabel("Angle (radians)")
-        plt.yticks([])
-        plt.show()
-
-    def __plot_vectors(self, vectors, labels):
-        origin = np.zeros((vectors.shape[0], 2))
-        plt.figure(figsize=(6, 6))
-
-        unique_labels = np.unique(labels)
-
-        # Up to 10 distinct colors
-        colormap = cm.get_cmap("tab10", len(unique_labels))
-
-        for i, label in enumerate(unique_labels):
-            mask = labels == label
-            color = colormap(i)
-
-            plt.quiver(
-                origin[mask, 0],
-                origin[mask, 1],
-                vectors[mask, 0],
-                vectors[mask, 1],
-                angles="xy",
-                scale_units="xy",
-                scale=1,
-                color=color,
-                alpha=0.8,
-                label=f"Cluster {label}",
-            )
-
-        plt.xlim(-1.1, 1.1)
-        plt.ylim(-1.1, 1.1)
-        plt.gca().set_aspect("equal")
-        plt.grid(True)
-        plt.legend()
-        plt.title("Direction Vectors by Cluster")
-        plt.xlabel("dx")
-        plt.ylabel("dy")
-        plt.show()
 
 
 # ----------------------------------------------------------
 
 if __name__ == "__main__":
-    image_path = os.path.abspath("data/chessred2k/images/0/G000_IMG001.jpg")
+    image_path = os.path.abspath("data/chessred2k/images/0/G000_IMG015.jpg")
     img = cv2.imread(image_path)
 
     detector = ChessboardDetector(img)
