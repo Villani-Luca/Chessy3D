@@ -4,6 +4,7 @@ import math
 import numpy as np
 from sklearn.cluster import AgglomerativeClustering, KMeans, DBSCAN
 import pyautogui
+import matplotlib.pyplot as plt
 
 
 class ChessboardDetector:
@@ -37,26 +38,19 @@ class ChessboardDetector:
         self.__detect_edges()
         self.__detect_lines()
         self.__classify_lines()
-        # self.__filter_lines_duplicates()
+        self.__filter_lines_duplicates()
         self.__find_line_intersections()
         self.__filter_duplicate_intersection_points()
-
-        # print(self.lines_angles)
-        # print(self.line_segments)
-        # print(self.lines_labels)
 
         # self.__debug_image_cv2(self.original_image)
         # self.__debug_image_cv2(self.processed_image)
         # self.__debug_image_cv2(self.edges_image)
         # self.__debug_image_cv2(self.segments_image)
         # self.__debug_image_cv2(self.lines_image)
-        # self.__debug_image_cv2(self.clustered_lines_image)
-        # self.__debug_image_cv2(self.clustered_lines_filtered_image)
-        # self.__debug_image_cv2(self.intersections_image)
+        self.__debug_image_cv2(self.clustered_lines_image)
+        self.__debug_image_cv2(self.clustered_lines_filtered_image)
+        self.__debug_image_cv2(self.intersections_image)
         self.__debug_image_cv2(self.filtered_intersections_image)
-
-        # debug_line_angles(angles_radiants, labels)
-        # plot_vectors(filtered_segments_features, labels)
 
     def __apply_image_processing(self):
 
@@ -121,9 +115,11 @@ class ChessboardDetector:
 
         img_height, img_width = self.original_image.shape[:2]
 
-        self.line_segments = self.__extend_segments_size(
-            segments, img_height, img_width
-        )
+        # self.line_segments = self.__extend_segments_size(
+        #    segments, img_height, img_width
+        # )
+
+        self.line_segments = self.__extend_segment_relative(segments, 400)
 
         self.lines_image = self.__draw_segments_on_image(
             self.line_segments, self.original_image
@@ -183,36 +179,53 @@ class ChessboardDetector:
             self.line_segments, self.original_image, self.lines_labels
         )
 
-    def __filter_lines_duplicates(self):
+    def __filter_lines_duplicates(self, rho_tol=20):
 
-        filtered_segments = []
-        filtered_labels = []
+        lines = self.__segments_to_hesse_normal_lines(self.line_segments)
+        merged = []
+        merged_labels = []
 
-        for label in self.lines_labels:
-            segments = self.line_segments[self.lines_labels == label]
+        for label in np.unique(self.lines_labels):
 
-            if len(segments) == 0:
-                continue
+            group_mask = self.lines_labels == label
+            group_lines = lines[group_mask]
+            group_segments = self.line_segments[group_mask]
 
-            dist_matrix = self.__calculate_segments_distance_matrix2(segments)
-            dist_matrix = np.nan_to_num(dist_matrix, nan=1e10)
+            X = group_lines[:, 0].reshape(-1, 1) / rho_tol
+            clustering = DBSCAN(eps=0.5, min_samples=1).fit(X)
 
-            dbscan = DBSCAN(eps=10, min_samples=1, metric="precomputed")
-            clusters = dbscan.fit_predict(dist_matrix)
+            for cluster_id in np.unique(clustering.labels_):
 
-            for cluster_id in np.unique(clusters):
-                if cluster_id == -1:
+                cluster_mask = clustering.labels_ == cluster_id
+                cluster_segments = group_segments[cluster_mask]
+
+                # Skip if only one segment in cluster
+                if len(cluster_segments) == 1:
+                    merged.append(cluster_segments[0])
+                    merged_labels.append(label)
                     continue
 
-                cluster_mask = clusters == cluster_id
-                cluster_segments = segments[cluster_mask]
-                cluster_dist_matrix = dist_matrix[cluster_mask][:, cluster_mask]
-                medoid_idx = np.argmin(cluster_dist_matrix.sum(axis=1))
-                filtered_segments.append(cluster_segments[medoid_idx])
-                filtered_labels.append(label)
+                # Merge segments using PCA (weighted by segment length)
+                points = cluster_segments.reshape(-1, 2)  # Shape: (2N, 2)
+                lengths = np.linalg.norm(
+                    cluster_segments[:, 2:] - cluster_segments[:, :2], axis=1
+                )
+                weights = np.repeat(lengths, 2)  # Weight endpoints by segment length
 
-        self.filtered_line_segments = np.array(filtered_segments)
-        self.filtered_line_labels = np.array(filtered_labels)
+                # Weighted PCA to find dominant direction
+                mean = np.average(points, axis=0, weights=weights)
+                centered = points - mean
+                _, _, Vt = np.linalg.svd(centered * weights[:, np.newaxis])
+                direction = Vt[0]  # Principal direction
+
+                projections = np.dot(centered, direction)
+                p1 = mean + np.min(projections) * direction
+                p2 = mean + np.max(projections) * direction
+                merged.append((int(p1[0]), int(p1[1]), int(p2[0]), int(p2[1])))
+                merged_labels.append(label)
+
+        self.filtered_line_segments = np.array(merged)
+        self.filtered_line_labels = np.array(merged_labels)
 
         self.clustered_lines_filtered_image = self.__draw_segments_on_image(
             self.filtered_line_segments,
@@ -220,10 +233,18 @@ class ChessboardDetector:
             self.filtered_line_labels,
         )
 
+        # x1 = self.filtered_line_segments[:, 0:2]
+        # x2 = self.filtered_line_segments[:, 2:4]
+        # st = np.concat((x1, x2), axis=0)
+        # self.clustered_lines_filtered_image = self.__draw_points(st, self.clustered_lines_filtered_image, size=10)
+
+        print(f"lines before filtering: {len(self.line_segments)}")
+        print(f"lines after filtering: {len(self.filtered_line_segments)}")
+
     def __find_line_intersections(self):
 
-        segments = self.line_segments
-        labels = self.lines_labels
+        segments = self.filtered_line_segments
+        labels = self.filtered_line_labels
 
         hesse_normal_lines = self.__segments_to_hesse_normal_lines(segments)
 
@@ -256,7 +277,7 @@ class ChessboardDetector:
         self.intersections_matrix = intersections_matrix
 
         self.intersections_image = self.__draw_intersection_points(
-            intersections_matrix, self.clustered_lines_image
+            intersections_matrix, self.clustered_lines_filtered_image
         )
 
     def __filter_duplicate_intersection_points(self):
@@ -271,8 +292,6 @@ class ChessboardDetector:
         # Since the intersection matrix is symmetrical, remove the duplicates
         unique_points = np.unique(points, axis=0)
 
-        print(f"points before filtering: {len(unique_points)}")
-
         clustering = DBSCAN(eps=1, min_samples=1).fit(unique_points)
         unique_labels = np.unique(clustering.labels_)
         centers = np.array(
@@ -282,12 +301,14 @@ class ChessboardDetector:
             ]
         )
 
-        print(f"points after filtering: {len(centers)}")
-
         self.filtered_points = centers
+
         self.filtered_intersections_image = self.__draw_points(
             self.filtered_points, self.original_image
         )
+
+        print(f"points before filtering: {len(unique_points)}")
+        print(f"points after filtering: {len(self.filtered_points)}")
 
     # ----------------------------------------------------------
 
@@ -501,6 +522,37 @@ class ChessboardDetector:
 
         return extended_segments
 
+    def __extend_segment_relative(self, segments, extend_length=250):
+        extended_segments = np.zeros((segments.shape[0], 4), dtype=np.int32)
+
+        for index, segment in enumerate(segments):
+            x1, y1, x2, y2 = segment
+
+            center_x = (x1 + x2) / 2
+            center_y = (y1 + y2) / 2
+
+            dx = x2 - x1
+            dy = y2 - y1
+
+            length = np.sqrt(dx**2 + dy**2)
+
+            unit_dx = dx / length
+            unit_dy = dy / length
+
+            new_x1 = center_x - unit_dx * (length / 2 + extend_length)
+            new_y1 = center_y - unit_dy * (length / 2 + extend_length)
+            new_x2 = center_x + unit_dx * (length / 2 + extend_length)
+            new_y2 = center_y + unit_dy * (length / 2 + extend_length)
+
+            extended_segments[index] = (
+                int(new_x1),
+                int(new_y1),
+                int(new_x2),
+                int(new_y2),
+            )
+
+        return extended_segments
+
     def __draw_segments_on_image(
         self, segments, img, labels=None, use_black_background=False
     ):
@@ -540,7 +592,7 @@ class ChessboardDetector:
 
         return self.__draw_points(unique_points, img)
 
-    def __draw_points(self, points, img: cv2.typing.MatLike):
+    def __draw_points(self, points, img: cv2.typing.MatLike, size=5):
 
         img_copy = img.copy()
 
@@ -552,87 +604,66 @@ class ChessboardDetector:
             cv2.circle(
                 img_copy,
                 (x_pixel, y_pixel),
-                5,
+                size,
                 (0, 255, 0),
                 -1,
             )
 
         return img_copy
 
-    def __calculate_segments_distance_matrix(self, segments):
-        n = segments.shape[0]
-        distance_matrix = np.zeros((n, n))
-
-        line_equations = self.__calculate_line_equation_from_segments(segments)
-
-        x1 = segments[:, 0]
-        x2 = segments[:, 2]
-        mx = (x1 + x2) / 2
-
-        y1 = segments[:, 1]
-        y2 = segments[:, 3]
-        my = (y1 + y2) / 2
-
-        # loop all the lines and calculate the distance between the line and the midpoints of all other segments
-        for i in range(n):
-            A, B, C = line_equations[i]
-            for j in range(i + 1, n):
-                distance = np.abs(A * mx[j] + B * my[j] + C) / np.sqrt(A**2 + B**2)
-                distance_matrix[i, j] = distance
-                distance_matrix[j, i] = distance
-
-        return distance_matrix
-
-    def __calculate_segments_distance_matrix2(self, segments):
-        """
-        Compute a hybrid distance metric for non-parallel but similarly angled lines.
-        Combines:
-        - Perpendicular distance between lines at their midpoint.
-        - Penalty for angular deviation.
-        """
-        n = len(segments)
-        distance_matrix = np.zeros((n, n))
-        line_equations = self.__calculate_line_equation_from_segments(segments)
-
-        # Precompute midpoints
-        midpoints = (segments[:, :2] + segments[:, 2:]) / 2
-
-        for i in range(n):
-            A1, B1, C1 = line_equations[i]
-            norm1 = np.sqrt(A1**2 + B1**2 + 1e-10)
-
-            for j in range(i + 1, n):
-                A2, B2, C2 = line_equations[j]
-                norm2 = np.sqrt(A2**2 + B2**2 + 1e-10)
-
-                # --- 1. Perpendicular Distance ---
-                # Distance from line i to midpoint of j
-                d_i_to_j = (
-                    np.abs(A1 * midpoints[j, 0] + B1 * midpoints[j, 1] + C1) / norm1
-                )
-                # Distance from line j to midpoint of i
-                d_j_to_i = (
-                    np.abs(A2 * midpoints[i, 0] + B2 * midpoints[i, 1] + C2) / norm2
-                )
-                avg_lateral_dist = (d_i_to_j + d_j_to_i) / 2
-
-                # --- 2. Angular Penalty ---
-                cos_theta = (A1 * A2 + B1 * B2) / (norm1 * norm2)
-                theta = np.arccos(np.clip(cos_theta, -1, 1))  # Angle in radians
-                angle_penalty = np.sin(theta)  # Penalize deviation from parallel
-
-                # --- Combine Metrics ---
-                hybrid_distance = avg_lateral_dist * (1 + angle_penalty)
-                distance_matrix[i, j] = distance_matrix[j, i] = hybrid_distance
-
-        return distance_matrix
-
-
 # ----------------------------------------------------------
 
+
+def debug_image_cv2(img: cv2.typing.MatLike, max_height=1024, max_width=1024):
+
+    window_name = "Debug"
+
+    img_height, img_width = img.shape[:2]
+
+    scale_width = max_width / img_width
+    scale_height = max_height / img_height
+
+    scale_factor = min(scale_width, scale_height)
+
+    new_width = int(img_width * scale_factor)
+    new_height = int(img_height * scale_factor)
+
+    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+    cv2.resizeWindow(window_name, new_width, new_height)
+    cv2.imshow(window_name, img)
+
+    screen_width, screen_height = pyautogui.size()
+
+    pos_x = (screen_width - new_width) // 2
+    pos_y = (screen_height - new_height) // 2
+
+    cv2.moveWindow(window_name, pos_x, pos_y)
+
+    cv2.waitKey(0)
+    cv2.destroyWindow(window_name)
+
+
+def get_corner_harris(img_path):
+    img = cv2.imread(img_path)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    gray = np.float32(gray)
+    dst = cv2.cornerHarris(gray, 2, 3, 0.04)
+
+    # result is dilated for marking the corners, not important
+    dst = cv2.dilate(dst, None)
+
+    # Threshold for an optimal value, it may vary depending on the image.
+    img[dst > 0.01 * dst.max()] = [0, 0, 255]
+
+    debug_image_cv2(img)
+
+
 if __name__ == "__main__":
-    image_path = os.path.abspath("data/chessred2k/images/0/G000_IMG015.jpg")
+    image_path = os.path.abspath("data/chessred2k/images/0/G000_IMG001.jpg")
     img = cv2.imread(image_path)
 
     detector = ChessboardDetector(img)
     detector.process()
+
+    # get_corner_harris(image_path)
