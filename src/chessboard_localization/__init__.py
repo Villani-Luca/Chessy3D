@@ -6,6 +6,7 @@ from sklearn.cluster import AgglomerativeClustering, KMeans, DBSCAN
 import pyautogui
 import matplotlib.pyplot as plt
 
+from line_segment_linking import link_and_merge_segments_array 
 
 class ChessboardDetector:
     original_image: cv2.typing.MatLike
@@ -39,7 +40,8 @@ class ChessboardDetector:
         self.__detect_lines()
         self.__classify_lines()
         self.__filter_lines_duplicates()
-        self.__find_line_intersections()
+        #self.__filter_lines_duplicates2()
+        self.__find_segment_intersections()
         self.__filter_duplicate_intersection_points()
 
         # self.__debug_image_cv2(self.original_image)
@@ -119,7 +121,9 @@ class ChessboardDetector:
         #    segments, img_height, img_width
         # )
 
-        self.line_segments = self.__extend_segment_relative(segments, 400)
+        self.line_segments = self.__extend_segment_relative(
+            segments, img_height, img_width, 400
+        )
 
         self.lines_image = self.__draw_segments_on_image(
             self.line_segments, self.original_image
@@ -241,6 +245,38 @@ class ChessboardDetector:
         print(f"lines before filtering: {len(self.line_segments)}")
         print(f"lines after filtering: {len(self.filtered_line_segments)}")
 
+    def __filter_lines_duplicates2(self):
+        img_height, img_width = self.original_image.shape[:2]
+
+        print(f"lines before merging: {len(self.filtered_line_segments)}")
+
+        merged = []
+        merged_labels = []
+
+        segments = self.filtered_line_segments
+        labels = self.filtered_line_labels
+
+        for label in np.unique(labels):
+            group_mask = labels == label
+            group_segments = segments[group_mask]
+            out = link_and_merge_segments_array(group_segments, img_height*img_width, 0.4)
+
+            for index, item in enumerate(out):
+                merged.append(item)
+                merged_labels.append(label)
+
+        self.filtered_line_segments = np.array(merged)
+        self.filtered_line_labels = np.array(merged_labels)
+
+        self.clustered_lines_filtered_image = self.__draw_segments_on_image(
+            self.filtered_line_segments,
+            self.original_image,
+            self.filtered_line_labels,
+        )
+
+        
+        print(f"lines after merging: {len(self.filtered_line_segments)}")
+
     def __find_line_intersections(self):
 
         segments = self.filtered_line_segments
@@ -265,6 +301,40 @@ class ChessboardDetector:
                 pt = self.__intersect_hesse_lines(
                     hesse_normal_lines[i], hesse_normal_lines[j], img_height, img_width
                 )
+
+                # Store intersection points only when results are found
+                if pt is not None:
+                    x, y = pt
+
+                    # the matrix is symmetric
+                    intersections_matrix[i, j] = [x, y]
+                    intersections_matrix[j, i] = [x, y]
+
+        self.intersections_matrix = intersections_matrix
+
+        self.intersections_image = self.__draw_intersection_points(
+            intersections_matrix, self.clustered_lines_filtered_image
+        )
+
+    def __find_segment_intersections(self):
+
+        segments = self.filtered_line_segments
+        labels = self.filtered_line_labels
+
+        N = len(segments)
+
+        # Using dense matrix even if this can be optimized with a sparse matrix
+        intersections_matrix = np.full((N, N, 2), np.nan)
+
+        for i in range(N):
+            for j in range(i + 1, N):
+
+                # Only check the intersections between lines belonging to different clusters
+                # (vertical-ish lines vs horizontal-ish lines)
+                if labels[i] == labels[j]:
+                    continue
+
+                pt = self.__calculate_segment_intersection(segments[i], segments[j])
 
                 # Store intersection points only when results are found
                 if pt is not None:
@@ -445,6 +515,38 @@ class ChessboardDetector:
 
         return (x, y)
 
+    def __calculate_segment_intersection(self, segment1, segment2, epsilon=1e-10):
+        x1, y1, x2, y2 = segment1
+        x3, y3, x4, y4 = segment2
+
+        a1 = y2 - y1
+        b1 = x1 - x2
+        c1 = a1 * x1 + b1 * y1
+
+        a2 = y4 - y3
+        b2 = x3 - x4
+        c2 = a2 * x3 + b2 * y3
+
+        det = a1 * b2 - a2 * b1
+
+        # Check if lines are parallel
+        if abs(det) < epsilon:
+            return None
+
+        # Intersection point
+        x = (b2 * c1 - b1 * c2) / det
+        y = (a1 * c2 - a2 * c1) / det
+
+        x_in_seg1 = np.isclose(x, np.clip(x, min(x1, x2), max(x1, x2)), atol=epsilon)
+        y_in_seg1 = np.isclose(y, np.clip(y, min(y1, y2), max(y1, y2)), atol=epsilon)
+        x_in_seg2 = np.isclose(x, np.clip(x, min(x3, x4), max(x3, x4)), atol=epsilon)
+        y_in_seg2 = np.isclose(y, np.clip(y, min(y3, y4), max(y3, y4)), atol=epsilon)
+
+        if x_in_seg1 and y_in_seg1 and x_in_seg2 and y_in_seg2:
+            return (x, y)
+
+        return None
+
     def __create_segments_from_lines(self, lines, segment_length=10000):
 
         segments = np.zeros((lines.shape[0], 4), dtype=np.int32)
@@ -522,7 +624,9 @@ class ChessboardDetector:
 
         return extended_segments
 
-    def __extend_segment_relative(self, segments, extend_length=250):
+    def __extend_segment_relative(
+        self, segments, max_height, max_width, extend_length=250
+    ):
         extended_segments = np.zeros((segments.shape[0], 4), dtype=np.int32)
 
         for index, segment in enumerate(segments):
@@ -544,14 +648,50 @@ class ChessboardDetector:
             new_x2 = center_x + unit_dx * (length / 2 + extend_length)
             new_y2 = center_y + unit_dy * (length / 2 + extend_length)
 
+            # clip segments to the image size
+            clipped_x1, clipped_y1, clipped_x2, clipped_y2 = self.__clip_segment(
+                new_x1, new_y1, new_x2, new_y2, max_height, max_width
+            )
+
             extended_segments[index] = (
-                int(new_x1),
-                int(new_y1),
-                int(new_x2),
-                int(new_y2),
+                int(np.round(clipped_x1)),
+                int(np.round(clipped_y1)),
+                int(np.round(clipped_x2)),
+                int(np.round(clipped_y2)),
             )
 
         return extended_segments
+
+    def __clip_segment(self, x1, y1, x2, y2, height, width):
+        # Parametric line equations: x = x1 + t*(x2-x1), y = y1 + t*(y2-y1)
+        t_values = [0.0, 1.0]  # Start with original segment
+
+        # Calculate intersection with image boundaries
+        for boundary in [0, width]:
+            if (x2 - x1) != 0:  # Avoid division by zero
+                t = (boundary - x1) / (x2 - x1)
+                y = y1 + t * (y2 - y1)
+                if 0 <= y <= height:
+                    t_values.append(t)
+
+        for boundary in [0, height]:
+            if (y2 - y1) != 0:  # Avoid division by zero
+                t = (boundary - y1) / (y2 - y1)
+                x = x1 + t * (x2 - x1)
+                if 0 <= x <= width:
+                    t_values.append(t)
+
+        # Find the valid t-range that stays within image
+        t_min = max(min(t_values), 0.0)
+        t_max = min(max(t_values), 1.0)
+
+        # Return clipped coordinates
+        return (
+            x1 + t_min * (x2 - x1),
+            y1 + t_min * (y2 - y1),
+            x1 + t_max * (x2 - x1),
+            y1 + t_max * (y2 - y1),
+        )
 
     def __draw_segments_on_image(
         self, segments, img, labels=None, use_black_background=False
@@ -611,6 +751,7 @@ class ChessboardDetector:
 
         return img_copy
 
+
 # ----------------------------------------------------------
 
 
@@ -660,7 +801,7 @@ def get_corner_harris(img_path):
 
 
 if __name__ == "__main__":
-    image_path = os.path.abspath("data/chessred2k/images/0/G000_IMG001.jpg")
+    image_path = os.path.abspath("data/chessred2k/images/0/G000_IMG015.jpg")
     img = cv2.imread(image_path)
 
     detector = ChessboardDetector(img)
