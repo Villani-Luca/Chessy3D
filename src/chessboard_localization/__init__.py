@@ -7,6 +7,7 @@ from sklearn.cluster import AgglomerativeClustering, KMeans, DBSCAN
 import drawing as dw
 import line_math as lm
 import image_processing as ip
+import quad_finder as qf
 
 from line_segment_linking import link_and_merge_segments_array
 
@@ -27,6 +28,9 @@ class ChessboardDetector:
 
     intersections_image: cv2.typing.MatLike
     filtered_intersections_image: cv2.typing.MatLike
+
+    quad_image: cv2.typing.MatLike
+    quad_image_black: cv2.typing.MatLike
 
     lines_angles = None
     line_segments = None
@@ -64,24 +68,28 @@ class ChessboardDetector:
         # dw.display_image_cv2(self.lines_image)
 
         self.__classify_lines()
-        dw.display_image_cv2(self.clustered_lines_image)
+        # dw.display_image_cv2(self.clustered_lines_image)
 
         self.__filter_lines_duplicates()
 
         print(f"segments before filtering: {len(self.line_segments)}")
         print(f"segments after filtering: {len(self.filtered_line_segments)}")
-        dw.display_image_cv2(self.clustered_lines_filtered_image)
+        # dw.display_image_cv2(self.clustered_lines_filtered_image)
 
         self.__merge_close_segments()
 
         print(f"segments after merging: {len(self.merged_line_segments)}")
-        dw.display_image_cv2(self.clustered_lines_merged_image)
+        # dw.display_image_cv2(self.clustered_lines_merged_image)
 
         self.__find_segment_intersections()
         dw.display_image_cv2(self.intersections_image)
 
-        self.__filter_duplicate_intersection_points()
-        dw.display_image_cv2(self.filtered_intersections_image)
+        # self.__filter_duplicate_intersection_points()
+        # dw.display_image_cv2(self.filtered_intersections_image)
+
+        self.__get_squares()
+        dw.display_image_cv2(self.quad_image)
+        dw.display_image_cv2(self.quad_image_black)
 
     def __detect_edges(self):
         canny = cv2.Canny(
@@ -249,7 +257,7 @@ class ChessboardDetector:
             segments_labels=self.filtered_line_labels,
         )
 
-    def __merge_close_segments(self, p=0.5):
+    def __merge_close_segments(self, p=0.9):
         img_height, img_width = self.scaled_image.shape[:2]
 
         merged = []
@@ -355,10 +363,18 @@ class ChessboardDetector:
                     intersections_matrix[i, j] = [x, y]
                     intersections_matrix[j, i] = [x, y]
 
-        self.intersections_matrix = intersections_matrix
+        nan_mask = np.isnan(intersections_matrix)
+        converted_intersection_mask = np.full_like(
+            intersections_matrix, -1, dtype=np.int32
+        )
+        converted_intersection_mask[~nan_mask] = intersections_matrix[~nan_mask].astype(
+            np.int32
+        )
+
+        self.intersections_matrix = converted_intersection_mask
 
         # Flatten the matrix
-        intersections_matrix_flattened = intersections_matrix.reshape(-1, 2)
+        intersections_matrix_flattened = self.intersections_matrix.reshape(-1, 2)
 
         # Remove nans
         nan_filter_mask = ~np.isnan(intersections_matrix_flattened).any(axis=1)
@@ -401,6 +417,17 @@ class ChessboardDetector:
         print(f"points before filtering: {len(unique_points)}")
         print(f"points after filtering: {len(self.filtered_points)}")
 
+    def __get_squares(self):
+        quads = qf.find_quads(self.intersections_matrix)
+        squares = qf.filter_squares_fast(quads, rtol=0.2, atol=20)
+        self.quad_image = dw.create_image_with_quads(squares, self.scaled_image)
+
+        img_height, img_width = self.scaled_image.shape[:2]
+
+        black_image = np.zeros((img_height, img_width, 3), dtype=np.uint8)
+        self.quad_image_black = dw.create_image_with_quads(squares, black_image)
+
+
 # ----------------------------------------------------------
 
 
@@ -421,7 +448,7 @@ def get_corner_harris(img_path):
 
 
 if __name__ == "__main__":
-    image_path = os.path.abspath("data/chessred2k/images/0/G000_IMG001.jpg")
+    image_path = os.path.abspath("data/chessred2k/images/0/G000_IMG015.jpg")
     img = cv2.imread(image_path)
 
     detector = ChessboardDetector(img)

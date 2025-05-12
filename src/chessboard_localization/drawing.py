@@ -85,3 +85,16 @@ def create_image_with_segments(
         )
 
     return dest_image
+
+
+def create_image_with_quads(quads, source_image, thickness=1, color=(0, 255, 0)):
+
+    dest_image = source_image.copy()
+
+    for quad in quads:
+        quad_pts = quad.reshape((-1, 1, 2))
+        cv2.polylines(
+            dest_image, [quad_pts], isClosed=True, color=color, thickness=thickness
+        )
+
+    return dest_image

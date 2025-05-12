@@ -214,6 +214,6 @@ def ___perspective_distorsion_case2():
 
 
 if __name__ == "__main__":
-    # ___simple_case()
-    #___perspective_distorsion_case1()
+    ___simple_case()
+    ___perspective_distorsion_case1()
     ___perspective_distorsion_case2()
