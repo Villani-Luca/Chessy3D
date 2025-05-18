@@ -2,6 +2,7 @@ from ultralytics import YOLO
 import wandb
 import cv2
 import pyautogui
+import numpy as np
 
 COLOR_PALETTE = [
     (255, 0, 0),  # Blue
@@ -103,6 +104,9 @@ def predict():
         imgsz=640,
     )
 
+    #h, status = cv2.findHomography(pts_src, pts_dst)
+    #im_dst = cv2.warpPerspective(im_src, h, size)
+
     img = cv2.imread(image_path)
 
     for kp in res[0].keypoints.xy:
@@ -114,7 +118,61 @@ def predict():
     display_image_cv2(img)
 
 
+def order_points(pts):
+        s = pts.sum(axis=1)
+        diff = np.diff(pts, axis=1)
+        return np.array([
+            pts[np.argmin(s)],
+            pts[np.argmin(diff)],
+            pts[np.argmax(s)],
+            pts[np.argmax(diff)]
+        ], dtype="float32")
+
+def expand_along_plane(points, scale_u=0.03, scale_v=0.03):
+    # Order: TL, TR, BR, BL
+    TL, TR, BR, BL = points
+
+    # Axes of the board in 2D
+    u = TR - TL  # x-axis of board
+    v = BL - TL  # y-axis of board
+
+    # Expand outward
+    expanded = np.zeros_like(points)
+
+    # TL - move backward along both axes
+    expanded[0] = TL - scale_u * u - scale_v * v
+    # TR - forward along u, backward along v
+    expanded[1] = TR + scale_u * u - scale_v * v
+    # BR - forward along both axes
+    expanded[2] = BR + scale_u * u + scale_v * v
+    # BL - backward along u, forward along v
+    expanded[3] = BL - scale_u * u + scale_v * v
+
+    return expanded
+
+def test():
+    image_path = "data/chessred2k/images/0/G000_IMG001.jpg"
+    image = cv2.imread(image_path)
+
+    #display_image_cv2(image)
+    model = YOLO("chessy3D/chessboard_localization2.1/weights/best.pt")
+
+    results = model.predict(image_path)
+    keypoints = results[0].keypoints.xy[0].cpu().numpy()[:4]
+
+    src_points = expand_along_plane(keypoints, 0.10, 0.10)
+
+    src_points = order_points(src_points)
+
+    dst_points = np.array([[0, 0], [1024, 0], [1024, 1024], [0, 1024]], dtype=np.float32)
+
+    matrix = cv2.getPerspectiveTransform(src_points, dst_points)
+    warped = cv2.warpPerspective(image, matrix, (1024, 1024))
+
+    display_image_cv2(warped)
+
 if __name__ == "__main__":
     #train()
     #validate()
-    predict()
+    #predict()
+    test()
