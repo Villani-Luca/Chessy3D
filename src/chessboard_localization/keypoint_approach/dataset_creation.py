@@ -2,7 +2,6 @@ import json
 import shutil
 from pathlib import Path
 
-s
 def __calculate_bbox_from_corners(corners_dict, img_w, img_h):
 
     x_coords = [
