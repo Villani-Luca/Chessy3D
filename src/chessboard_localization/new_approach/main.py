@@ -38,10 +38,10 @@ def process(file_path):
     intersection_matrix, unique_points = lines.find_segment_intersections(merged_segments, merged_labels)
     intersections_image = dw.create_image_with_points(unique_points,merged_segments_image, 5)
     print(f"unique points: {len(unique_points)}")
-    dw.display_image_cv2(intersections_image, window_name=f"{file_name} -> intersections")
+    #dw.display_image_cv2(intersections_image, window_name=f"{file_name} -> intersections")
 
-    squares = lines.get_squares(intersection_matrix, rtol=0.1, atol=0)
-    squares_image = dw.create_image_with_quads(squares, original_image, 2)
+    squares, quads = lines.get_squares(intersection_matrix)
+    squares_image = dw.create_image_with_quads(squares, original_image, 4)
     dw.display_image_cv2(squares_image, window_name=f"{file_name} -> squares")
 
 def process_all_images():
@@ -52,9 +52,9 @@ def process_all_images():
        process(file_path)
 
 def process_single_image():
-    file_path = Path("data/chessred2k/images/0/G000_IMG013.jpg")
+    file_path = Path("data/chessred2k/images/0/G000_IMG015.jpg")
     process(file_path)
 
 if __name__ == "__main__":
     process_all_images()
-    # process_single_image()
+    #process_single_image()
