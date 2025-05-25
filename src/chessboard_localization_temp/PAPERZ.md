@@ -26,3 +26,18 @@ costruendo piano piano un quadrato che incapsuli il resto per poi usarlo come co
 
 l'idea della dilation é venuta osservando dei diagrammi dei vari poligoni all'interno dell'immagine e il come differivano in immagine diverse, inoltre per il nostro caso d'uso é stato esplorato un fine tuning dei parametri di hough che peró a parte per la thresholds non si sono rivelati impattanti ( ripetere il test nel caso ) anche con notevoli variazioni.
 un approccio di studio é stato creare combinazioni dei parametri di hough per portare avanti nella pipeline molteplici immagini da studiare in parallelo per poi capire quale fosse la migliore per quell'immagine. questo approccio é stato messo in sospeso in favore di filtri rispetto all'output di hough per avere un risultato maggiormente deterministico e di piú facile ottimizzazione.
+
+# 26/06/2025
+continuando con l'analisi della pipeline e la quest per la riduzione del rimore nei passaggi pre hough, sono passato all'input originale ovvero a canny.
+
+analizzando varie combinazioni di thresholds si é in primis notato che come teoricamente prevedibile, effettuando un operazione di thresholding
+precedente a canny questa rende la parametrizzazione di canny praticamente ininfluente.
+
+portandoci quindi a testare i parametri direttamente sull'immagine grigia alla ricerca di un migliore input, ( immagini canny_params_gray ), avendo dei risultati 
+soddisfacenti con thresholds tra 300-400 e 500-700 apparantemente ottimali per il nostro scopo
+
+un idea classica per ridurre il rumore é di effetutare un filtro gaussiano sull'immagine griglia per smoothing, applicandolo alla nostra analisi come previsto si é visto una diminuzione notevole della noise spostando di conseguenza i parametri ottimali di canny nel range di 100-300 e 300-600
+
+in questi range empirici si sospetta che si abbia una buona risoluzione per hough in modo da evitare noise e di conseguenza avere migliori risultati nei passaggi di identificazione della board.
+
+( immagini nella cartella sono per possibili esempi nel paaper, salvo anche una copia del notebook usato per crearle in modo da poterlo modificare nel caso )
