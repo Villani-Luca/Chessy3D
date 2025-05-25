@@ -11,17 +11,17 @@ import quad_finder as qf
 
 def get_lines(original_image, file_name):
 
-    #dw.display_image_cv2(original_image, window_name=f"{file_name} -> original")
+    # dw.display_image_cv2(original_image, window_name=f"{file_name} -> original")
 
     grayscale_image = cv2.cvtColor(original_image, cv2.COLOR_BGR2GRAY)
 
-    #dw.display_image_cv2(grayscale_image, window_name=f"{file_name} -> grayscale")
+    # dw.display_image_cv2(grayscale_image, window_name=f"{file_name} -> grayscale")
 
     blurred_bilateral_grayscale_image = cv2.bilateralFilter(
-        grayscale_image, d=15, sigmaColor=75, sigmaSpace=75
+        grayscale_image, d=3, sigmaColor=75, sigmaSpace=75
     )
 
-    #dw.display_image_cv2(blurred_bilateral_grayscale_image, window_name=f"{file_name} -> bilateral")
+    # dw.display_image_cv2(blurred_bilateral_grayscale_image, window_name=f"{file_name} -> bilateral")
 
     threshold_value, thresholded_bilateral_image = cv2.threshold(
         blurred_bilateral_grayscale_image,
@@ -30,21 +30,21 @@ def get_lines(original_image, file_name):
         type=cv2.THRESH_BINARY + cv2.THRESH_OTSU,
     )
 
-    #dw.display_image_cv2(thresholded_bilateral_image, window_name=f"{file_name} -> otsu")
+    # dw.display_image_cv2(thresholded_bilateral_image, window_name=f"{file_name} -> otsu")
 
     canny_image = cv2.Canny(
-        thresholded_bilateral_image,
-        threshold1=20,  # lower hysteresis threshold
-        threshold2=255,  # upper hysteresis threshold,
+        blurred_bilateral_grayscale_image,
+        threshold1=300,  # lower hysteresis threshold
+        threshold2=600,  # upper hysteresis threshold,
         apertureSize=3,  # sobel kernel size
         L2gradient=True,  # false = l1 norm (faster), true = l2 norm (more accurate)
     )
 
-    #dw.display_image_cv2(canny_image, window_name="canny")
+    # dw.display_image_cv2(canny_image, window_name="canny")
 
     dilated_image = cv2.dilate(canny_image, np.ones((7, 7), np.uint8), iterations=1)
 
-    #dw.display_image_cv2(dilated_image, window_name=f"{file_name} -> dilation")
+    # dw.display_image_cv2(dilated_image, window_name=f"{file_name} -> dilation")
 
     hough_lines = cv2.HoughLinesP(
         dilated_image,
@@ -65,9 +65,10 @@ def get_lines(original_image, file_name):
             lines_image, pt1=(x1, y1), pt2=(x2, y2), color=(255, 255, 255), thickness=4
         )
 
-    #dw.display_image_cv2(lines_image, window_name=f"{file_name} -> lines")
+    # dw.display_image_cv2(lines_image, window_name=f"{file_name} -> lines")
 
     return hough_lines, lines_image
+
 
 def cluster_lines(hough_lines):
     x1 = hough_lines[:, 0]
