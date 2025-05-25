@@ -46,29 +46,80 @@ class ChessboardDetector:
     def __init__(self, img):
         self.original_image = img
 
+    def lines(self):
+         #dw.display_image_cv2(original_image, window_name=f"{file_name} -> original")
+
+        grayscale_image = cv2.cvtColor(self.original_image, cv2.COLOR_BGR2GRAY)
+
+        #dw.display_image_cv2(grayscale_image, window_name=f"{file_name} -> grayscale")
+
+        blurred_bilateral_grayscale_image = cv2.bilateralFilter(
+            grayscale_image, d=15, sigmaColor=75, sigmaSpace=75
+        )
+
+        #dw.display_image_cv2(blurred_bilateral_grayscale_image, window_name=f"{file_name} -> bilateral")
+
+        threshold_value, thresholded_bilateral_image = cv2.threshold(
+            blurred_bilateral_grayscale_image,
+            thresh=0,
+            maxval=255,
+            type=cv2.THRESH_BINARY + cv2.THRESH_OTSU,
+        )
+
+        #dw.display_image_cv2(thresholded_bilateral_image, window_name=f"{file_name} -> otsu")
+
+        canny_image = cv2.Canny(
+            thresholded_bilateral_image,
+            threshold1=20,  # lower hysteresis threshold
+            threshold2=255,  # upper hysteresis threshold,
+            apertureSize=3,  # sobel kernel size
+            L2gradient=True,  # false = l1 norm (faster), true = l2 norm (more accurate)
+        )
+
+        #dw.display_image_cv2(canny_image, window_name="canny")
+
+        dilated_image = cv2.dilate(canny_image, np.ones((7, 7), np.uint8), iterations=1)
+
+        #dw.display_image_cv2(dilated_image, window_name=f"{file_name} -> dilation")
+
+        hough_lines = cv2.HoughLinesP(
+            dilated_image,
+            rho=1,
+            theta=np.pi / 180,
+            threshold=500,
+            minLineLength=100,
+            maxLineGap=150,
+        )
+
+        hough_lines = np.array(hough_lines).squeeze()
+
+        lines_image = np.zeros(grayscale_image.shape, np.uint8)
+
+        for line in hough_lines:
+            x1, y1, x2, y2 = line
+            cv2.line(
+                lines_image, pt1=(x1, y1), pt2=(x2, y2), color=(255, 255, 255), thickness=4
+            )
+
+        x1 = hough_lines[:, 0]
+        y1 = hough_lines[:, 1]
+        x2 = hough_lines[:, 2]
+        y2 = hough_lines[:, 3]
+        dx = x2 - x1
+        dy = y2 - y1
+        angles = np.arctan2(dy, dx)
+        doubled_angles = angles * 2
+
+        features = np.stack((np.cos(doubled_angles), np.sin(doubled_angles)), axis=1)
+        kmeans = KMeans(n_clusters=2)
+        kmean_res = kmeans.fit(features)
+        labels = kmean_res.labels_
+
+        self.line_segments = hough_lines
+        self.lines_labels = labels
+
     def process(self):
-        print(
-            f"original image size: {self.original_image.shape[:2][0]}x{self.original_image.shape[:2][1]}"
-        )
-        # dw.display_image_cv2(self.original_image)
-
-        self.scaled_image, self.processed_image = ip.apply_image_processing(
-            self.original_image
-        )
-        print(
-            f"scaled image size: {self.scaled_image.shape[:2][0]}x{self.scaled_image.shape[:2][1]}"
-        )
-        # dw.display_image_cv2(self.processed_image)
-
-        self.__detect_edges()
-        # dw.display_image_cv2(self.edges_image)
-
-        self.__detect_lines()
-        # dw.display_image_cv2(self.segments_image)
-        # dw.display_image_cv2(self.lines_image)
-
-        self.__classify_lines()
-        # dw.display_image_cv2(self.clustered_lines_image)
+        self.lines()
 
         self.__filter_lines_duplicates()
 
@@ -122,7 +173,7 @@ class ChessboardDetector:
 
         segments = np.array(hough_segments).squeeze()
 
-        self.segments_image = dw.create_image_with_segments(segments, self.scaled_image)
+        self.segments_image = dw.create_image_with_segments(segments, self.original_image)
 
         x1 = segments[:, 0]
         y1 = segments[:, 1]
@@ -135,7 +186,7 @@ class ChessboardDetector:
         # angles between [-π, π]
         self.lines_angles = np.arctan2(dy, dx)
 
-        img_height, img_width = self.scaled_image.shape[:2]
+        img_height, img_width = self.original_image.shape[:2]
 
         # self.line_segments = lm.extend_segments_size(
         #    segments, img_height, img_width
@@ -146,7 +197,7 @@ class ChessboardDetector:
         )
 
         self.lines_image = dw.create_image_with_segments(
-            self.line_segments, self.scaled_image
+            self.line_segments, self.original_image
         )
 
     def __detect_lines_alt(self):
@@ -165,7 +216,7 @@ class ChessboardDetector:
 
         self.line_segments = lm.convert_hesse_normal_form_lines_to_segments(lines)
         self.lines_image = dw.create_image_with_segments(
-            self.line_segments, self.scaled_image
+            self.line_segments, self.original_image
         )
 
     def __classify_lines(self):
@@ -180,7 +231,7 @@ class ChessboardDetector:
         kmeans = KMeans(n_clusters=2)
         self.lines_labels = kmeans.fit(features).labels_
         self.clustered_lines_image = dw.create_image_with_segments(
-            self.line_segments, self.scaled_image, segments_labels=self.lines_labels
+            self.line_segments, self.original_image, segments_labels=self.lines_labels
         )
 
     def __classify_lines_alt(self):
@@ -200,7 +251,7 @@ class ChessboardDetector:
 
         self.lines_labels = model.fit_predict(features)
         self.clustered_lines_image = dw.create_image_with_segments(
-            self.line_segments, self.scaled_image, segments_labels=self.lines_labels
+            self.line_segments, self.original_image, segments_labels=self.lines_labels
         )
 
     def __filter_lines_duplicates(self, rho_tol=10, eps=0.02):
@@ -253,12 +304,12 @@ class ChessboardDetector:
 
         self.clustered_lines_filtered_image = dw.create_image_with_segments(
             self.filtered_line_segments,
-            self.scaled_image,
+            self.original_image,
             segments_labels=self.filtered_line_labels,
         )
 
     def __merge_close_segments(self, p=0.9):
-        img_height, img_width = self.scaled_image.shape[:2]
+        img_height, img_width = self.original_image.shape[:2]
 
         merged = []
         merged_labels = []
@@ -282,7 +333,7 @@ class ChessboardDetector:
 
         self.clustered_lines_merged_image = dw.create_image_with_segments(
             self.merged_line_segments,
-            self.scaled_image,
+            self.original_image,
             segments_labels=self.merged_line_labels,
         )
 
@@ -297,7 +348,7 @@ class ChessboardDetector:
 
         # Using dense matrix even if this can be optimized with a sparse matrix
         intersections_matrix = np.full((N, N, 2), np.nan)
-        img_height, img_width = self.scaled_image.shape[:2]
+        img_height, img_width = self.original_image.shape[:2]
 
         for i in range(N):
             for j in range(i + 1, N):
@@ -411,7 +462,7 @@ class ChessboardDetector:
         self.filtered_points = centers
 
         self.filtered_intersections_image = dw.create_image_with_points(
-            self.filtered_points, self.scaled_image
+            self.filtered_points, self.original_image
         )
 
         print(f"points before filtering: {len(unique_points)}")
@@ -420,9 +471,9 @@ class ChessboardDetector:
     def __get_squares(self):
         quads = qf.find_quads(self.intersections_matrix)
         squares = qf.filter_squares_fast(quads, rtol=0.2, atol=20)
-        self.quad_image = dw.create_image_with_quads(squares, self.scaled_image)
+        self.quad_image = dw.create_image_with_quads(squares, self.original_image)
 
-        img_height, img_width = self.scaled_image.shape[:2]
+        img_height, img_width = self.original_image.shape[:2]
 
         black_image = np.zeros((img_height, img_width, 3), dtype=np.uint8)
         self.quad_image_black = dw.create_image_with_quads(squares, black_image)
