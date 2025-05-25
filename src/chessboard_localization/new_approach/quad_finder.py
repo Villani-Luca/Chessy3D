@@ -152,7 +152,7 @@ def __draw_quads(intersections, quads, height=512, width=512):
             black_image, [quad_pts], isClosed=True, color=(0, 255, 0), thickness=1
         )
 
-    dw.display_image_cv2(black_image)
+    dw.display_image_cv2(black_image, "quads")
 
 
 def ___simple_case():

@@ -96,9 +96,9 @@ def validate():
     )
 
 def predict():
-    image_path = "data/chessred2k/images/0/G000_IMG001.jpg"
+    image_path = "data/chessred2k/images/0/G000_IMG011.jpg"
 
-    model = YOLO("chessy3D/chessboard_localization2.1/weights/best.pt")
+    model = YOLO("models/board_localization.pt")
     res = model.predict(
         image_path,
         imgsz=640,
@@ -155,7 +155,7 @@ def test():
     image = cv2.imread(image_path)
 
     #display_image_cv2(image)
-    model = YOLO("chessy3D/chessboard_localization2.1/weights/best.pt")
+    model = YOLO("models/board_localization.pt")
 
     results = model.predict(image_path)
     keypoints = results[0].keypoints.xy[0].cpu().numpy()[:4]
@@ -174,5 +174,5 @@ def test():
 if __name__ == "__main__":
     #train()
     #validate()
-    #predict()
-    test()
+    predict()
+    #test()
