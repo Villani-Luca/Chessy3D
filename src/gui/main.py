@@ -4,16 +4,17 @@ import pathlib
 
 import chess
 from PySide6.QtCore import Qt, QRectF
-from PySide6.QtGui import QColor, QBrush, QPixmap
+from PySide6.QtGui import QColor, QBrush, QPixmap, QImage
 from PySide6.QtWidgets import (QApplication, QLabel, QTableWidget, QTableWidgetItem,
                                QVBoxLayout, QWidget, QGridLayout, QGraphicsView, QGraphicsScene,
                                QGraphicsRectItem, QGraphicsPixmapItem)
 
 from src.retrieval.src.model.pgsql import Connection, PgGamesRepository
+import src.chessboard_localization_temp.main as chess_localization
 
 
 class FileUploader(QLabel):
-    def __init__(self, callback: Callable[[str], None] | None = None):
+    def __init__(self, callback: Callable[[object, str], None] | None = None):
         super().__init__("Drag and Drop a File Here")
 
         self.file_upload_callback = callback
@@ -38,7 +39,7 @@ class FileUploader(QLabel):
                 self.setPixmap(pixmap.scaled(self.size()))
 
                 if self.file_upload_callback is not None:
-                    self.file_upload_callback(file_path)
+                    self.file_upload_callback(self, file_path)
 
             elif file_path.lower().endswith(('mp4', 'avi', 'mov', 'mkv')):
                 self.setText("Video support is pending!")
@@ -134,6 +135,20 @@ class DataGrid(QTableWidget):
         self.update_empty_label()
 
 class MainWindow(QWidget):
+    @staticmethod
+    def on_file_upload(uploader: FileUploader, filename: str):
+        (
+            rgb_image, 
+            corners_list, 
+            squares_data_original
+        ) = chess_localization.auto_chessboard_localization(filename)
+
+        height, width, channels = rgb_image.shape
+        q_image = QImage(rgb_image.data, width, height, channels * width, QImage.Format.Format_BGR888)
+        pixmap = QPixmap.fromImage(q_image).scaled(uploader.size())
+        uploader.setPixmap(pixmap)
+
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Chessy 3D")
@@ -148,11 +163,8 @@ class MainWindow(QWidget):
 
         # Create widgets
         self.chess_board = ChessBoard(board)
-        def on_file_upload(filename: str):
-            board.push(list(board.legal_moves)[0])
-            self.chess_board.draw_board()
 
-        self.file_uploader = FileUploader(callback=on_file_upload)
+        self.file_uploader = FileUploader(callback=MainWindow.on_file_upload)
         self.data_grid = DataGrid()
 
         # Main layout with QGridLayout
