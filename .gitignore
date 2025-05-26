@@ -25,4 +25,11 @@ venv.bak/
 data/
 !data/.gitkeep
 
+# Model artifacts (checkpoints, weights, etc.)
+models/
+!models/.gitkeep
 
+# Visual studio
+.vs/
+obj/
+bin/

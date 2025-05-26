@@ -1,0 +1,1 @@
+yolo settings wandb=True
