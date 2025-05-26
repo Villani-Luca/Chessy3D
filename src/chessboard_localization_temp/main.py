@@ -24,5 +24,6 @@ def auto_chessboard_localization(image_path):
     squares_data_original = find_chessboard_squares(corners_list)
 
     # Display the result
+    resized_image_copy = resized_image.copy()
     draw_chessboard_squares(resized_image, squares_data_original, corners_list)
-    return resized_image, corners_list, squares_data_original
+    return resized_image, corners_list, squares_data_original, resized_image_copy
