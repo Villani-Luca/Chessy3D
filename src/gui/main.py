@@ -7,7 +7,7 @@ from PySide6.QtCore import QThreadPool
 from PySide6.QtGui import QPixmap, QImage
 from PySide6.QtWidgets import (QApplication, QWidget, QGridLayout)
 
-from src.gui.chessboard import ChessBoard
+from src.gui.chessboard import ChessBoard, ChessBoardWidget
 from src.gui.datagrid import DataGrid
 from src.gui.fileuploader import FileUploader
 from src.gui.recog import RecognitionJob
@@ -46,30 +46,15 @@ class MainWindow(QWidget):
         games_repo = PgGamesRepository(pgconn)
 
         # Create widgets
-        self.chess_board = ChessBoard(board)
-
-        # def on_file_upload_callback(uploader: FileUploader, filename: str):
-        #     _, squares_data_original, img = MainWindow.on_file_upload(uploader, filename)
-        #     game_list, result_plot = MainWindow.recog(img, squares_data_original)
-        #
-        #     board.clear()
-        #     for (cell, detected_class) in game_list:
-        #         piece = chess.Piece(self.piece_mapping[detected_class], chess.WHITE if detected_class < 6 else chess.BLACK)
-        #         board.set_piece_at(cell - 1, piece)
-        #
-        #     height, width, channels = result_plot.shape
-        #     q_image = QImage(result_plot.data, width, height, channels * width, QImage.Format.Format_BGR888)
-        #     pixmap = QPixmap.fromImage(q_image).scaled(uploader.size())
-        #     uploader.setPixmap(pixmap)
-        #
-        #     self.chess_board.draw_board()
+        # self.chess_board = ChessBoard(board)
+        self.chess_widget = ChessBoardWidget(ChessBoard(board))
 
         def on_file_upload_callback(uploader: FileUploader, filename: str):
             img, resized = chess_localization.chessboard_localization_resize(filename)
 
             def start_callback():
                 board.clear()
-                self.chess_board.draw_board()
+                self.chess_widget.draw_board()
 
             def progress_callback(progress: float):
                 print(progress)
@@ -83,7 +68,7 @@ class MainWindow(QWidget):
                 for (cell, detected_class) in game_list:
                     piece = chess.Piece(piece_mapping[detected_class], chess.WHITE if detected_class < 6 else chess.BLACK)
                     board.set_piece_at(cell - 1, piece)
-                self.chess_board.draw_board()
+                self.chess_widget.draw_board()
 
             recogjob = RecognitionJob(
                 img,
@@ -94,6 +79,7 @@ class MainWindow(QWidget):
             recogjob.signals.start.connect(start_callback)
             recogjob.signals.progress.connect(progress_callback)
             recogjob.signals.result.connect(finish_callback)
+            recogjob.signals.error.connect(lambda x: print(x))
 
             self.threadpool.start(recogjob)
 
@@ -107,7 +93,7 @@ class MainWindow(QWidget):
 
         # Add widgets to the grid
         main_layout.addWidget(self.file_uploader, 0, 0)
-        main_layout.addWidget(self.chess_board, 0, 1)
+        main_layout.addWidget(self.chess_widget, 0, 1)
         main_layout.addWidget(self.data_grid, 1, 0, 1, 2)  # Span across two columns
 
         # Set row stretch to make the first row twice as large as the second row

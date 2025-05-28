@@ -3,7 +3,8 @@ import pathlib
 import chess
 from PySide6.QtCore import Qt, QRectF
 from PySide6.QtGui import QPixmap, QColor, QBrush
-from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsRectItem, QGraphicsPixmapItem
+from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsRectItem, QGraphicsPixmapItem, QWidget, \
+    QVBoxLayout, QHBoxLayout, QPushButton
 
 
 class ChessBoard(QGraphicsView):
@@ -61,3 +62,48 @@ class ChessBoard(QGraphicsView):
         offset = (self.cell_size - pixmap.width()) / 2
         qpixmap.setPos(col * self.cell_size + offset, row * self.cell_size + offset)
         scene.addItem(qpixmap)
+
+    def rotate_board_left(self):
+        new_board = chess.Board(None)
+        for square in chess.SQUARES:
+            piece = self.board.piece_at(square)
+            if piece:
+                row, col = divmod(square, 8)
+                new_row, new_col = 7 - col, row
+                new_square = new_row * 8 + new_col
+                new_board.set_piece_at(new_square, piece)
+        self.board = new_board
+        self.draw_board()
+
+    def rotate_board_right(self):
+        new_board = chess.Board(None)
+        for square in chess.SQUARES:
+            piece = self.board.piece_at(square)
+            if piece:
+                row, col = divmod(square, 8)
+                new_row, new_col = col, 7 - row
+                new_square = new_row * 8 + new_col
+                new_board.set_piece_at(new_square, piece)
+        self.board = new_board
+        self.draw_board()
+
+class ChessBoardWidget(QWidget):
+    def __init__(self, board: ChessBoard):
+        super().__init__()
+
+        layout = QVBoxLayout(self)
+        self.chess_view = board
+        layout.addWidget(self.chess_view)
+
+        button_layout = QHBoxLayout()
+        self.rotate_left_btn = QPushButton("⟲")
+        self.rotate_right_btn = QPushButton("⟳")
+        self.rotate_left_btn.clicked.connect(self.chess_view.rotate_board_left)
+        self.rotate_right_btn.clicked.connect(self.chess_view.rotate_board_right)
+
+        button_layout.addWidget(self.rotate_left_btn)
+        button_layout.addWidget(self.rotate_right_btn)
+        layout.addLayout(button_layout)
+
+    def draw_board(self):
+        self.chess_view.draw_board()
