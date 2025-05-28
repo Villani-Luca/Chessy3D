@@ -13,18 +13,22 @@ resp = list_import_jobs(
     collection_name=NAIVE_COLLECTION_NAME,
 )
 
-print(json.dumps(resp.json(), indent=4))
+r = resp.json()
+job_ids = [(x["jobId"], x["state"], x["progress"]) for x in r["data"]["records"]]
 
-resp = get_import_progress(
-    url=url,
-    job_id="457819205515459134",
-)
+for (job_id, state, job_progress) in job_ids:
+    resp = get_import_progress(
+        url=url,
+        job_id=job_id,
+    )
 
-js = resp.json()
-total = len(js['data']['details'])
-progress = len([1 for x in js['data']['details'] if x['state'] == 'InProgress'])
-completed = len([1 for x in js['data']['details'] if x['state'] == 'Completed'])
-failed = len([1 for x in js['data']['details'] if x['state'] == 'Failed'])
+    js = resp.json()
+    total = len(js['data']['details'])
+    progress = len([1 for x in js['data']['details'] if x['state'] == 'InProgress'])
+    completed = len([1 for x in js['data']['details'] if x['state'] == 'Completed'])
+    failed = len([1 for x in js['data']['details'] if x['state'] == 'Failed'])
+    pending = len([1 for x in js['data']['details'] if x['state'] == 'Pending'])
+    importing = len([1 for x in js['data']['details'] if x['state'] == 'Importing'])
 
-print(json.dumps(resp.json(), indent=4))
-print(f'COMPLETED: {completed} / {total} PROGRESS: {progress} / {total} FAILED: {failed} / {total}')
+    print(f'JOB ID: {job_id} STATE: {state} PROGRESS: {job_progress}')
+    print(f'COMPLETED: {completed} / {total} PROGRESS: {progress} / {total} FAILED: {failed} / {total} PENDING: {pending} / {total} IMPORTING: {importing} / {total}')
