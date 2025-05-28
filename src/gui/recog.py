@@ -27,9 +27,7 @@ class RecognitionJob(Worker):
         self.signals.update_image.emit(rgb_image)
 
         game_list, result_plot = self.__piece_recognition(img, squares_data_original)
-        self.signals.result.emit((game_list, result_plot))
-
-        return "Done"
+        return (game_list, result_plot)
 
     def __chessboard_localization(self):
         (
@@ -37,7 +35,10 @@ class RecognitionJob(Worker):
             corners_list,
             squares_data_original,
             img
-        ) = chess_localization.auto_chessboard_localization(self.img, self.resized_image)
+        ) = chess_localization.auto_chessboard_localization(
+            self.img,
+            self.resized_image
+        )
 
         return corners_list, squares_data_original, img, rgb_image
 
@@ -71,7 +72,7 @@ class RecognitionJob(Worker):
                     if (min(x_values) <= x_mid <= max(x_values)) and (min(y_values) <= y_mid <= max(y_values)):
                         a = int(result.boxes.cls[id])
 
-                        print(f" cell :  {cell_value} --> {a} ")
+                        #print(f" cell :  {cell_value} --> {a} ")
                         # add cell values and piece cell_value(class value
                         game_list.append([cell_value, a])
                         break
