@@ -83,7 +83,7 @@ def train():
     )
 
 def validate():
-    #model = YOLO("runs/pose/train/weights/best.pt")
+    #model = YOLO("runs/pose/valid/weights/best.pt")
     model = YOLO("chessy3D/chessboard_localization2.1/weights/best.pt")
 
     # Validate on test set
@@ -172,7 +172,7 @@ def test():
     display_image_cv2(warped)
 
 if __name__ == "__main__":
-    #train()
+    #valid()
     #validate()
     predict()
     #test()

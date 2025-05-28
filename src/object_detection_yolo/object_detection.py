@@ -1,9 +1,10 @@
 from ultralytics import YOLO
-import matplotlib.pyplot as plt
 import ChessPiece
+import matplotlib.pyplot as plt
 
 def detect_objects(image):
-    model = YOLO("chess-model-yolov8m.pt")
+    # model = YOLO("chess-model-yolov8m.pt")
+    model = YOLO("D:\\CodeProjects\\University\\Chessy3D\\src\\object_detection_yolo\\runs\\detect\\train3\w\eights\\best.pt")
     results = model(image)
     cps = []
 
@@ -28,5 +29,9 @@ def detect_objects(image):
             xyxy_n_box_position=box.xyxyn[0]
         )
         cps.append(cp)
+
+    im_array = results[0].plot()  # plot a BGR numpy array of predictions
+
+    plt.imshow(im_array)
 
     return cps

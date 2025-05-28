@@ -84,7 +84,7 @@ def build(image_set, args):
     assert ann_folder_root.exists(), f'provided COCO path {ann_folder_root} does not exist'
     mode = 'panoptic'
     PATHS = {
-        "train": ("train2017", Path("annotations") / f'{mode}_train2017.json'),
+        "valid": ("train2017", Path("annotations") / f'{mode}_train2017.json'),
         "val": ("val2017", Path("annotations") / f'{mode}_val2017.json'),
     }
 

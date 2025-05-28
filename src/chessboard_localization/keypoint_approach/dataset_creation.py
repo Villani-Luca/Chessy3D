@@ -47,7 +47,7 @@ def convert_chessred2k_dataset_corners(src_dataset_path, dest_dataset_path):
         parsed_file = json.load(f)
 
     # Initialize splits
-    splits = ["train", "val", "test"]
+    splits = ["valid", "val", "test"]
 
     for split in splits:
         (dest_base_dir / split / "images").mkdir(parents=True, exist_ok=True)

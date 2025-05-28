@@ -1,4 +1,4 @@
-train: ../../../data/board_localization/train/images
+train: ../../../data/board_localization/valid/images
 val: ../../../data/board_localization/val/images
 test: ../../../data/board_localization/test/images
 nc: 1
