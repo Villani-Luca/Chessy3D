@@ -61,7 +61,8 @@ class RecognitionJob(Worker):
                 # find middle of bounding boxes for x and y
                 x_mid = int((x1 + x2) / 2)
                 # add padding to y values
-                y_mid = int((y1 + y2) / 2) + 25
+                # TODO: al posto di 75 prendere l'ultimo quarto / quinto della bounding box, dipende dalla risoluzione
+                y_mid = int((y1 + y2) / 2) + 75
 
                 for cell_value, coordinates in coord_dict.items():
                     x_values = [point[0] for point in coordinates]
