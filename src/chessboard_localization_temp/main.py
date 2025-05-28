@@ -3,10 +3,13 @@ import itertools
 from src.chessboard_localization_temp.localization import draw_chessboard_squares, find_chessboard, find_chessboard_squares
 
 # Path of Image that you want to convert
-def auto_chessboard_localization(image_path):
+def chessboard_localization_resize(image_path):
     image = cv2.imread(image_path)
     resized_image = cv2.resize(image, (3000, 3000))
 
+    return  image, resized_image
+
+def auto_chessboard_localization(image, resized_image):
     gray_image=cv2.cvtColor(resized_image,cv2.COLOR_BGR2GRAY)
 
     # parameters used for tuning other parameters based on image resolution
