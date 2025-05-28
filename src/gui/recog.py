@@ -26,7 +26,7 @@ class RecognitionJob(Worker):
         _, squares_data_original, img, rgb_image = self.__chessboard_localization()
         self.signals.update_image.emit(rgb_image)
 
-        game_list, result_plot = self.__piece_recognition(img, squares_data_original)
+        game_list, result_plot = self.__piece_recognition(img, rgb_image, squares_data_original)
         return (game_list, result_plot)
 
     def __chessboard_localization(self):
@@ -42,7 +42,22 @@ class RecognitionJob(Worker):
 
         return corners_list, squares_data_original, img, rgb_image
 
-    def __piece_recognition(self, image, squares_data_original):
+    class_colors = {
+        9: (200, 200, 200),  # white-pawn
+        3: (80, 80, 80),  # black-pawn
+        8: (0, 165, 255),  # white-knight
+        2: (0, 85, 170),  # black-knight
+        0: (0, 255, 0),  # white-bishop
+        6: (0, 100, 0),  # black-bishop
+        11: (255, 0, 0),  # white-rook
+        5: (139, 0, 0),  # black-rook
+        10: (128, 0, 128),  # white-queen
+        4: (64, 0, 64),  # black-queen
+        7: (0, 0, 255),  # white-king
+        1: (0, 0, 139),  # black-king
+    }
+
+    def __piece_recognition(self, image, outimage, squares_data_original):
         model = ultralytics.YOLO(self.recog_yolo_path)
 
         # make prediction
@@ -55,9 +70,10 @@ class RecognitionJob(Worker):
 
         game_list = []
         for result in results:  # results is model's prediction
-            for id, box in enumerate(result.boxes.xyxy):  # box with xyxy format, (N, 4)
+            for idx, box in enumerate(result.boxes.xyxy):  # box with xyxy format, (N, 4)
 
                 x1, y1, x2, y2 = int(box[0]), int(box[1]), int(box[2]), int(box[3])  # take coordinates
+                class_id = int(result.boxes.cls[idx])
 
                 # find middle of bounding boxes for x and y
                 x_mid = int((x1 + x2) / 2)
@@ -72,11 +88,17 @@ class RecognitionJob(Worker):
                     y_values = [point[1] for point in coordinates]
 
                     if (min(x_values) <= x_mid <= max(x_values)) and (min(y_values) <= y_mid <= max(y_values)):
-                        a = int(result.boxes.cls[id])
+
 
                         #print(f" cell :  {cell_value} --> {a} ")
                         # add cell values and piece cell_value(class value
-                        game_list.append([cell_value, a])
+                        game_list.append([cell_value, class_id])
                         break
 
-        return game_list, results[0].plot()
+                # custom draw yolo result on image
+                color = self.class_colors.get(class_id, (255, 255, 255))  # Default to white if class not in mapping
+                cv2.rectangle(outimage, (x1, y1), (x2, y2), color, 8)
+                # cv2.putText(image, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 1, cv2.LINE_AA)
+
+
+        return game_list, outimage
