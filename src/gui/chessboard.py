@@ -43,7 +43,8 @@ class ChessBoard(QGraphicsView):
                 square.setBrush(QBrush(color))
                 scene.addItem(square)
 
-                piece = self.board.piece_at(row * 8 + col)
+                position = (7 - row) * 8 + col
+                piece = self.board.piece_at(position)
                 if piece is not None:
                     self.draw_piece(row, col, piece)
 
