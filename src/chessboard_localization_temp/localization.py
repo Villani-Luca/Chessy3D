@@ -245,6 +245,11 @@ def find_best_fitting_enclosing_square(image: cv2.typing.MatLike):
     # Initialize variables to store extreme points
     return sort_quadrilateral_approx(best_fitting_square[0])
 
+def chessboard_best_hough(image, canny_params, upsize_factor, scale_factor):
+    canny_images = canny_multiple(image, canny_params, upsize_factor)
+    hough_images = hough_multiple(canny_images)
+    _, _, best_square_approx = find_best_squares_hough(hough_images, scale_factor)
+
 def find_chessboard(image: cv2.typing.MatLike, canny_params, upsize_factor, scale_factor):
     canny_images = canny_multiple(image, canny_params, upsize_factor)
     hough_images = hough_multiple(canny_images)

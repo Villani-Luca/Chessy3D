@@ -6,14 +6,18 @@ import ultralytics
 from PySide6.QtCore import QThreadPool
 from PySide6.QtGui import QPixmap, QImage
 from PySide6.QtWidgets import (QApplication, QWidget, QGridLayout)
+from ultralytics import YOLO
 
 from src.gui.chessboard import ChessBoard, ChessBoardWidget
 from src.gui.datagrid import DataGrid
 from src.gui.fileuploader import FileUploader
-from src.gui.recog import RecognitionJob
+from src.gui.recognitionjob import RecognitionJob
+from src.gui.retrivaljob import RetrievalJob
 from src.gui.worker import Worker, WorkerSignals
+from src.retrieval.src.milvus import MilvusRepository, NAIVE_COLLECTION_NAME, MilvusSetup
 from src.retrieval.src.model.pgsql import Connection, PgGamesRepository
 import src.chessboard_localization_temp.main as chess_localization
+from src.retrieval.src.position_embeddings import NaivePositionEmbedder
 
 piece_mapping = {
     9: chess.PAWN,  # white-pawn
@@ -39,15 +43,36 @@ class MainWindow(QWidget):
 
         # CONST
         PG_CONN = args['pgconn']
+        YOLO_PATH = args['object_detection_yolo']
 
         # globals
+        print("Setting up main window...")
         board = chess.Board()
         pgconn = Connection(PG_CONN)
+
+        print("Setting up services...")
         games_repo = PgGamesRepository(pgconn)
+
+        position_embedder = NaivePositionEmbedder()
 
         # Create widgets
         # self.chess_board = ChessBoard(board)
+        print("Setting up widgets...")
+
         self.chess_widget = ChessBoardWidget(ChessBoard(board))
+
+        def refresh_datagrid():
+            self.retrievaljob = RetrievalJob(
+                position_embedder,
+                games_repo,
+                board,
+            )
+            # retrievaljob.signals.progress.connect(lambda progress: print(progress))
+            self.retrievaljob.signals.start.connect(lambda: self.data_grid.set_enable_refreshbutton(False))
+            self.retrievaljob.signals.result.connect(lambda r: self.data_grid.set_data(r))
+            self.retrievaljob.signals.finished.connect(lambda: self.data_grid.set_enable_refreshbutton(True))
+
+            self.threadpool.start(self.retrievaljob)
 
         def on_file_upload_callback(uploader: FileUploader, filename: str):
             img, resized = chess_localization.chessboard_localization_resize(filename)
@@ -69,12 +94,9 @@ class MainWindow(QWidget):
                     piece = chess.Piece(piece_mapping[detected_class], chess.WHITE if detected_class < 6 else chess.BLACK)
                     board.set_piece_at(cell - 1, piece)
                 self.chess_widget.draw_board()
+                #refresh_datagrid()
 
-            recogjob = RecognitionJob(
-                img,
-                resized,
-                r"D:\Projects\Uni\Chessy3D\src\object_detection_yolo\chess-model-yolov8m.pt"
-            )
+            recogjob = RecognitionJob(img, resized, YOLO_PATH)
             recogjob.signals.update_image.connect(self.file_uploader.setOpencvImage)
             recogjob.signals.start.connect(start_callback)
             recogjob.signals.progress.connect(progress_callback)
@@ -83,13 +105,11 @@ class MainWindow(QWidget):
 
             self.threadpool.start(recogjob)
 
-
-
         self.file_uploader = FileUploader(callback=on_file_upload_callback)
-        self.data_grid = DataGrid()
+        self.data_grid = DataGrid(on_refresh_button=refresh_datagrid)
 
         # Main layout with QGridLayout
-        main_layout = QGridLayout()
+        main_layout =  QGridLayout()
 
         # Add widgets to the grid
         main_layout.addWidget(self.file_uploader, 0, 0)
@@ -108,7 +128,11 @@ class MainWindow(QWidget):
 
 if __name__ == "__main__":
     args = {
-        'pgconn': r"host=localhost user=postgres password=password dbname=chessy"
+        'pgconn': r"host=localhost user=postgres password=password dbname=chessy",
+        #"milvus_url": r"http://localhost:19530",
+        #"milvus_collection": NAIVE_COLLECTION_NAME,
+        #"object_detection_yolo": r"D:\Projects\Uni\Chessy3D\src\object_detection_yolo\best_yolo_e200_small.pt",
+        "object_detection_yolo": r"D:\Projects\Uni\Chessy3D\src\object_detection_yolo\chess-model-yolov8m.pt"
     }
 
 
