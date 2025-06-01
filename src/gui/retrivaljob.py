@@ -16,7 +16,7 @@ class RetrievalJobSignals(WorkerSignals):
 
 class RetrievalJob(Worker):
     def __init__(self,
-        embedding: np.ndarray | np.array,
+        embedding: np.ndarray,
         games_repo: PgGamesRepository,
         search_limit = 5):
         super().__init__(RetrievalJobSignals())
