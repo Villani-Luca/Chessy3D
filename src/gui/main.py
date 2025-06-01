@@ -3,7 +3,7 @@ import sys
 import chess
 import cv2.typing
 import ultralytics
-from PySide6.QtCore import QThreadPool
+from PySide6.QtCore import QThreadPool, Slot
 from PySide6.QtWidgets import (QApplication, QWidget, QGridLayout)
 
 from src.gui.chessboard import ChessBoard, ChessBoardWidget
@@ -37,6 +37,20 @@ class MainWindow(QWidget):
         # CONST
         pg_conn = args['pgconn']
         yolo_path = args['object_detection_yolo']
+        class_colors = {
+            9: (200, 200, 200),  # white-pawn
+            3: (80, 80, 80),  # black-pawn
+            8: (0, 165, 255),  # white-knight
+            2: (0, 85, 170),  # black-knight
+            0: (0, 255, 0),  # white-bishop
+            6: (0, 100, 0),  # black-bishop
+            11: (255, 0, 0),  # white-rook
+            5: (139, 0, 0),  # black-rook
+            10: (128, 0, 128),  # white-queen
+            4: (64, 0, 64),  # black-queen
+            7: (0, 0, 255),  # white-king
+            1: (0, 0, 139),  # black-king
+        }
 
         self.setWindowTitle("Chessy 3D")
         self.threadpool = QThreadPool()
@@ -53,7 +67,7 @@ class MainWindow(QWidget):
         # Create widgets
         print("Setting up widgets...")
 
-        self.chess_widget = ChessBoardWidget(ChessBoard(chess.Board()))
+        self.chess_widget = ChessBoardWidget(ChessBoard(chess.Board(None)))
 
         def refresh_datagrid():
             embedding = self.chess_widget.retrieve_embedding(position_embedder)
@@ -67,41 +81,51 @@ class MainWindow(QWidget):
         def on_file_upload_callback(uploader: FileUploader, filename: str):
             img, resized = chess_localization.chessboard_localization_resize(filename)
 
-            def start_callback():
-                self.chess_widget.draw_board(chess.Board())
+            self.chess_widget.draw_board(chess.Board(None))
+            rgb_image, corners_list, squares_data_original, img = chess_localization.auto_chessboard_localization(img,resized)
 
-            def progress_callback(progress: float):
-                print(progress)
+            # make prediction
+            results = yolo(img)  # path to test image
 
-            def finish_callback(result: tuple[list[tuple[int, int]], cv2.typing.MatLike]):
-                try:
-                    game_list, result_img = result
-                    self.file_uploader.setOpencvImage(result_img)
+            coord_dict = {}
+            for cell, coordinate in enumerate(squares_data_original, start=1):
+                center, bottom_right, top_right, top_left, bottom_left = coordinate
+                coord_dict[cell] = [bottom_right, top_right, top_left, bottom_left]
 
-                    new_board = chess.Board()
-                    for (cell, detected_class) in game_list:
-                        piece = chess.Piece(piece_mapping[detected_class], chess.WHITE if detected_class < 6 else chess.BLACK)
-                        new_board.set_piece_at(cell - 1, piece)
+            game_list = []
+            for result in results:  # results is model's prediction
+                print(result.boxes.xyxy)
+                for idx, box in enumerate(result.boxes.xyxy):  # box with xyxy format, (N, 4)
 
-                    self.chess_widget.draw_board(new_board)
-                except Exception as e:
-                    print("ERROR finish_callback: ", e)
-                #refresh_datagrid()
+                    x1, y1, x2, y2 = int(box[0]), int(box[1]), int(box[2]), int(box[3])  # take coordinates
+                    class_id = int(result.boxes.cls[idx])
 
-            def update_image_callback(image: cv2.typing.MatLike):
-                try:
-                    self.file_uploader.setOpencvImage(image)
-                except Exception as e:
-                    print("ERROR update_image_callback: ", e)
+                    # find middle of bounding boxes for x and y
+                    x_mid = int((x1 + x2) / 2)
+                    # add padding to y values
+                    y_mid = y2 - 30
 
-            recognition_job = RecognitionJob(img, resized, yolo)
-            recognition_job.signals.update_image.connect(update_image_callback)
-            recognition_job.signals.start.connect(start_callback)
-            recognition_job.signals.progress.connect(progress_callback)
-            recognition_job.signals.result.connect(finish_callback)
-            recognition_job.signals.error.connect(lambda x: print(x))
+                    for cell_value, coordinates in coord_dict.items():
+                        x_values = [point[0] for point in coordinates]
+                        y_values = [point[1] for point in coordinates]
 
-            self.threadpool.start(recognition_job)
+                        if (min(x_values) <= x_mid <= max(x_values)) and (min(y_values) <= y_mid <= max(y_values)):
+                            # add cell values and piece cell_value(class value
+                            game_list.append([cell_value, class_id])
+                            break
+
+                    # custom draw yolo result on image
+                    color = class_colors.get(class_id, (255, 255, 255))  # Default to white if class not in mapping
+                    cv2.rectangle(rgb_image, (x1, y1), (x2, y2), color, 8)
+
+            print("finish callback")
+            self.file_uploader.set_opencv_image(rgb_image)
+            new_board = chess.Board(None)
+            for (cell, detected_class) in game_list:
+                piece = chess.Piece(piece_mapping[detected_class], chess.WHITE if detected_class < 6 else chess.BLACK)
+                new_board.set_piece_at(cell - 1, piece)
+
+            self.chess_widget.draw_board(new_board)
 
         self.file_uploader = FileUploader(callback=on_file_upload_callback)
         self.data_grid = DataGrid(on_refresh_button=refresh_datagrid)

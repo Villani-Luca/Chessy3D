@@ -82,7 +82,7 @@ class PgGamesRepository:
                 FROM moves m
                 where m.embeddingid in (	
                     select v.embeddingid
-                    from temp_naivevectors v
+                    from naivevectors v
                     ORDER BY v.embedding <~> %s
                     LIMIT 5
                 ) 

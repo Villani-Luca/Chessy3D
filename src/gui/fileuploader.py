@@ -16,7 +16,7 @@ class FileUploader(QLabel):
         self.setStyleSheet("border: 2px dashed #aaa;")
         self.setAcceptDrops(True)
 
-    def setOpencvImage(self, img: cv2.typing.MatLike):
+    def set_opencv_image(self, img: cv2.typing.MatLike):
         height, width, channels = img.shape
         q_image = QImage(img.data, width, height, channels * width, QImage.Format.Format_BGR888)
         pixmap = QPixmap.fromImage(q_image).scaled(self.size())

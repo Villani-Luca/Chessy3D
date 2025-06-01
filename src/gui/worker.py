@@ -58,10 +58,12 @@ class Worker[T: WorkerSignals](QRunnable):
             self.signals.start.emit()
             result = self.execute()
         except:
+            print("worker error")
             traceback.print_exc()
             exctype, value = sys.exc_info()[:2]
             self.signals.error.emit((exctype, value, traceback.format_exc()))
         else:
+            print("worker finished")
             self.signals.result.emit(result)  # Return the result of the processing
         finally:
             self.signals.finished.emit()  # Done

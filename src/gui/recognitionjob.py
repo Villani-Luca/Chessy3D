@@ -23,8 +23,10 @@ class RecognitionJob(Worker):
     def execute(self):
         _, squares_data_original, img, rgb_image = self.__chessboard_localization()
         self.signals.update_image.emit(rgb_image)
+        self.signals.progress.emit(50, "Chessboard localized")
 
         game_list, result_plot = self.__piece_recognition(img, rgb_image, squares_data_original)
+        self.signals.progress.emit(100, "Pieces recognition complete")
         return game_list, result_plot
 
     def __chessboard_localization(self):
@@ -66,6 +68,7 @@ class RecognitionJob(Worker):
 
         game_list = []
         for result in results:  # results is model's prediction
+            print(result.boxes.xyxy)
             for idx, box in enumerate(result.boxes.xyxy):  # box with xyxy format, (N, 4)
 
                 x1, y1, x2, y2 = int(box[0]), int(box[1]), int(box[2]), int(box[3])  # take coordinates
