@@ -1,3 +1,6 @@
+import numpy as np
+from pgvector import Bit
+
 from src.retrieval.src.model.game import Game
 
 import psycopg
@@ -69,21 +72,24 @@ class PgGamesRepository:
             prepare=True
         ).fetchall()
 
-    def get_best_games_from_naiveposition(self, position: str):
+    def get_best_games_from_naiveposition(self, position: np.array):
         return self.conn.cursor.execute(
             """
-            SELECT * 
+            SELECT g.event, g.date, g.white, g.whitetitle, g.black, g.blacktitle
             FROM games g
-            JOIN moves m on g.id = m.gameid
-            where m.embeddingid in (	
-                select v.embeddingid
-                from temp_naivevectors v
-                ORDER BY v.embedding <~> %s
-                LIMIT 5
-            ) 
-            limit 10
-            """
-            (position,)
+            WHERE g.id in (
+                SELECT m.gameid
+                FROM moves m
+                where m.embeddingid in (	
+                    select v.embeddingid
+                    from temp_naivevectors v
+                    ORDER BY v.embedding <~> %s
+                    LIMIT 5
+                ) 
+                LIMIT 10
+            )
+            """,
+            (Bit(position).to_text(),)
         ).fetchall()
 
     def get_games_from_move(self, move_id: str, limit = 5):

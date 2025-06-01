@@ -12,13 +12,13 @@ class RecognitionJob(Worker):
     def __init__(self,
                  img: cv2.typing.MatLike,
                  resized_image: cv2.typing.MatLike,
-                 recog_yolo_path: str):
+                 yolo: ultralytics.YOLO):
         super().__init__(RecognitionJobSignals())
 
         # Store constructor arguments (re-used for processing)
         self.img = img
         self.resized_image = resized_image
-        self.recog_yolo_path = recog_yolo_path
+        self.yolo = yolo
 
         self.signals = RecognitionJobSignals()
 
@@ -58,10 +58,8 @@ class RecognitionJob(Worker):
     }
 
     def __piece_recognition(self, image, outimage, squares_data_original):
-        model = ultralytics.YOLO(self.recog_yolo_path)
-
         # make prediction
-        results = model(image)  # path to test image
+        results = self.yolo(image)  # path to test image
 
         coord_dict = {}
         for cell, coordinate in enumerate(squares_data_original, start=1):

@@ -49,6 +49,7 @@ class MainWindow(QWidget):
         print("Setting up main window...")
         board = chess.Board()
         pgconn = Connection(PG_CONN)
+        yolo = ultralytics.YOLO(YOLO_PATH)
 
         print("Setting up services...")
         games_repo = PgGamesRepository(pgconn)
@@ -96,7 +97,7 @@ class MainWindow(QWidget):
                 self.chess_widget.draw_board()
                 #refresh_datagrid()
 
-            recogjob = RecognitionJob(img, resized, YOLO_PATH)
+            recogjob = RecognitionJob(img, resized, yolo)
             recogjob.signals.update_image.connect(self.file_uploader.setOpencvImage)
             recogjob.signals.start.connect(start_callback)
             recogjob.signals.progress.connect(progress_callback)

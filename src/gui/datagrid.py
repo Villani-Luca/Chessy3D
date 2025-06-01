@@ -3,11 +3,12 @@ from PySide6.QtWidgets import QTableWidget, QLabel, QVBoxLayout, QTableWidgetIte
 
 
 class DataGrid(QTableWidget):
-    def __init__(self, on_refresh_button):
+    def __init__(self, on_refresh_button, headers=["Event", "Date", "White", "White title", "Black", "Black title"]):
         super().__init__()  # Example: 5 rows, 3 columns
 
         # self.setColumnCount(3)
-        self.setHorizontalHeaderLabels(["Column 1", "Column 2", "Column 3"])
+        self.headers = headers
+        self.setHorizontalHeaderLabels(headers)
 
         # Set up the label to display when the table is empty
         self.empty_label = QLabel("Waiting for image upload")
@@ -51,7 +52,8 @@ class DataGrid(QTableWidget):
 
         self.reset()
         self.clearContents()
-        self.setColumnCount(3)
+        self.setColumnCount(len(self.headers))
+        self.setHorizontalHeaderLabels(self.headers)
         self.setRowCount(len(data))
 
         for row in  range(len(data)):

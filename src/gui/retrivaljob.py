@@ -36,5 +36,8 @@ class RetrievalJob(Worker):
         # milvus_result = self.milvus_repo.search_embeddings(embedding, self.search_limit)
         #self.signals.progress.emit(40, 'Searching similar games...')
 
-        #result = self.games_repo.get_games_from_move()
-        return [('id', 'match', 'test'),('id', 'match', 'test'),('id', 'match', 'test'),('id', 'match', 'test'),('id', 'match', 'test'),('id', 'match', 'test')]
+        result = self.games_repo.get_best_games_from_naiveposition(embedding)
+        print(result)
+
+        return result
+        #return [('id', 'match', 'test'),('id', 'match', 'test'),('id', 'match', 'test'),('id', 'match', 'test'),('id', 'match', 'test'),('id', 'match', 'test')]
