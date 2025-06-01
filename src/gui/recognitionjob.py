@@ -1,6 +1,6 @@
 import cv2
 import ultralytics
-from PySide6.QtCore import Signal, QThreadPool
+from PySide6.QtCore import Signal
 
 import src.chessboard_localization_temp.main as chess_localization
 from src.gui.worker import Worker, WorkerSignals
@@ -20,14 +20,12 @@ class RecognitionJob(Worker):
         self.resized_image = resized_image
         self.yolo = yolo
 
-        self.signals = RecognitionJobSignals()
-
     def execute(self):
         _, squares_data_original, img, rgb_image = self.__chessboard_localization()
         self.signals.update_image.emit(rgb_image)
 
         game_list, result_plot = self.__piece_recognition(img, rgb_image, squares_data_original)
-        return (game_list, result_plot)
+        return game_list, result_plot
 
     def __chessboard_localization(self):
         (

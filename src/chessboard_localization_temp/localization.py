@@ -272,6 +272,7 @@ def find_chessboard_squares(corners, threshold = 0, size = (1200, 1200)):
     '''
     :param corners (top_left, top_right, bottom_left, bottom_right)
     :param threshold extra space on all sides
+    :param size tuple
     '''
     width, height = size 
 

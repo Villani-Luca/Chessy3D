@@ -1,5 +1,6 @@
 import chess
 import cv2
+import numpy as np
 import ultralytics
 from PySide6.QtCore import Signal, QThreadPool
 
@@ -15,29 +16,19 @@ class RetrievalJobSignals(WorkerSignals):
 
 class RetrievalJob(Worker):
     def __init__(self,
-        embedder: PositionEmbedder,
+        embedding: np.ndarray | np.array,
         games_repo: PgGamesRepository,
-        board: chess.Board,
         search_limit = 5):
         super().__init__(RetrievalJobSignals())
 
         # Store constructor arguments (re-used for processing)
-
-        self.embedder = embedder
-        self.board = board.copy()
         self.games_repo = games_repo
         self.signals = RetrievalJobSignals()
         self.search_limit = search_limit
+        self.embedding = embedding
 
     def execute(self):
-        embedding = self.embedder.embedding(self.board)
-        #self.signals.progress.emit(10, 'Searching game...')
-
-        # milvus_result = self.milvus_repo.search_embeddings(embedding, self.search_limit)
-        #self.signals.progress.emit(40, 'Searching similar games...')
-
-        result = self.games_repo.get_best_games_from_naiveposition(embedding)
+        result = self.games_repo.get_best_games_from_naiveposition(self.embedding)
         print(result)
 
         return result
-        #return [('id', 'match', 'test'),('id', 'match', 'test'),('id', 'match', 'test'),('id', 'match', 'test'),('id', 'match', 'test'),('id', 'match', 'test')]

@@ -1,20 +1,16 @@
 import sys
-import time
 
 import chess
+import cv2.typing
 import ultralytics
 from PySide6.QtCore import QThreadPool
-from PySide6.QtGui import QPixmap, QImage
 from PySide6.QtWidgets import (QApplication, QWidget, QGridLayout)
-from ultralytics import YOLO
 
 from src.gui.chessboard import ChessBoard, ChessBoardWidget
 from src.gui.datagrid import DataGrid
 from src.gui.fileuploader import FileUploader
 from src.gui.recognitionjob import RecognitionJob
 from src.gui.retrivaljob import RetrievalJob
-from src.gui.worker import Worker, WorkerSignals
-from src.retrieval.src.milvus import MilvusRepository, NAIVE_COLLECTION_NAME, MilvusSetup
 from src.retrieval.src.model.pgsql import Connection, PgGamesRepository
 import src.chessboard_localization_temp.main as chess_localization
 from src.retrieval.src.position_embeddings import NaivePositionEmbedder
@@ -47,7 +43,6 @@ class MainWindow(QWidget):
 
         # globals
         print("Setting up main window...")
-        board = chess.Board()
         pgconn = Connection(PG_CONN)
         yolo = ultralytics.YOLO(YOLO_PATH)
 
@@ -60,51 +55,56 @@ class MainWindow(QWidget):
         # self.chess_board = ChessBoard(board)
         print("Setting up widgets...")
 
-        self.chess_widget = ChessBoardWidget(ChessBoard(board))
+        self.chess_widget = ChessBoardWidget(ChessBoard(chess.Board()))
 
         def refresh_datagrid():
-            self.retrievaljob = RetrievalJob(
-                position_embedder,
-                games_repo,
-                board,
-            )
-            # retrievaljob.signals.progress.connect(lambda progress: print(progress))
-            self.retrievaljob.signals.start.connect(lambda: self.data_grid.set_enable_refreshbutton(False))
-            self.retrievaljob.signals.result.connect(lambda r: self.data_grid.set_data(r))
-            self.retrievaljob.signals.finished.connect(lambda: self.data_grid.set_enable_refreshbutton(True))
+            embedding = self.chess_widget.retrieve_embedding(position_embedder)
+            self.retrieval_job = RetrievalJob(embedding, games_repo)
+            self.retrieval_job.signals.start.connect(lambda: self.data_grid.set_enable_refreshbutton(False))
+            self.retrieval_job.signals.result.connect(lambda r: self.data_grid.set_data(r))
+            self.retrieval_job.signals.finished.connect(lambda: self.data_grid.set_enable_refreshbutton(True))
 
-            self.threadpool.start(self.retrievaljob)
+            self.threadpool.start(self.retrieval_job)
 
         def on_file_upload_callback(uploader: FileUploader, filename: str):
             img, resized = chess_localization.chessboard_localization_resize(filename)
 
             def start_callback():
-                board.clear()
-                self.chess_widget.draw_board()
+                self.chess_widget.draw_board(chess.Board())
 
             def progress_callback(progress: float):
                 print(progress)
 
             def finish_callback(result):
-                game_list, img = result
+                try:
+                    game_list, img = result
 
-                self.file_uploader.setOpencvImage(img)
+                    self.file_uploader.setOpencvImage(img)
 
-                board.clear()
-                for (cell, detected_class) in game_list:
-                    piece = chess.Piece(piece_mapping[detected_class], chess.WHITE if detected_class < 6 else chess.BLACK)
-                    board.set_piece_at(cell - 1, piece)
-                self.chess_widget.draw_board()
+                    new_board = chess.Board()
+                    for (cell, detected_class) in game_list:
+                        piece = chess.Piece(piece_mapping[detected_class], chess.WHITE if detected_class < 6 else chess.BLACK)
+                        new_board.set_piece_at(cell - 1, piece)
+
+                    self.chess_widget.draw_board(new_board)
+                except Exception as e:
+                    print("ERROR finish_callback: ", e)
                 #refresh_datagrid()
 
-            recogjob = RecognitionJob(img, resized, yolo)
-            recogjob.signals.update_image.connect(self.file_uploader.setOpencvImage)
-            recogjob.signals.start.connect(start_callback)
-            recogjob.signals.progress.connect(progress_callback)
-            recogjob.signals.result.connect(finish_callback)
-            recogjob.signals.error.connect(lambda x: print(x))
+            def update_image_callback(image: cv2.typing.MatLike):
+                try:
+                    self.file_uploader.setOpencvImage(image)
+                except Exception as e:
+                    print("ERROR update_image_callback: ", e)
 
-            self.threadpool.start(recogjob)
+            recognition_job = RecognitionJob(img, resized, yolo)
+            recognition_job.signals.update_image.connect(update_image_callback)
+            recognition_job.signals.start.connect(start_callback)
+            recognition_job.signals.progress.connect(progress_callback)
+            recognition_job.signals.result.connect(finish_callback)
+            recognition_job.signals.error.connect(lambda x: print(x))
+
+            self.threadpool.start(recognition_job)
 
         self.file_uploader = FileUploader(callback=on_file_upload_callback)
         self.data_grid = DataGrid(on_refresh_button=refresh_datagrid)

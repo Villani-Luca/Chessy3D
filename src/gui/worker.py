@@ -1,7 +1,7 @@
 import sys
 import traceback
 from abc import ABC, abstractmethod, ABCMeta
-from typing import Callable
+from typing import Callable, TypeVar
 
 from PySide6.QtCore import QObject, Signal, QRunnable, Slot
 
@@ -23,7 +23,8 @@ class WorkerSignals(QObject):
     result = Signal(object)
     progress = Signal(float, str)
 
-class Worker(QRunnable):
+TSignal = TypeVar('TSignal')
+class Worker[T: WorkerSignals](QRunnable):
     '''
     Worker thread
 
@@ -37,7 +38,7 @@ class Worker(QRunnable):
 
     '''
 
-    def __init__(self, signals: WorkerSignals = WorkerSignals()):
+    def __init__(self, signals: T = WorkerSignals()):
         super().__init__()
 
         # Store constructor arguments (re-used for processing)
