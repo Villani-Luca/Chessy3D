@@ -33,26 +33,24 @@ piece_mapping = {
 class MainWindow(QWidget):
     def __init__(self, args: dict):
         super().__init__()
-        self.setWindowTitle("Chessy 3D")
-
-        self.threadpool = QThreadPool()
 
         # CONST
-        PG_CONN = args['pgconn']
-        YOLO_PATH = args['object_detection_yolo']
+        pg_conn = args['pgconn']
+        yolo_path = args['object_detection_yolo']
+
+        self.setWindowTitle("Chessy 3D")
+        self.threadpool = QThreadPool()
 
         # globals
         print("Setting up main window...")
-        pgconn = Connection(PG_CONN)
-        yolo = ultralytics.YOLO(YOLO_PATH)
+        pgconn = Connection(pg_conn)
+        yolo = ultralytics.YOLO(yolo_path)
 
         print("Setting up services...")
         games_repo = PgGamesRepository(pgconn)
-
         position_embedder = NaivePositionEmbedder()
 
         # Create widgets
-        # self.chess_board = ChessBoard(board)
         print("Setting up widgets...")
 
         self.chess_widget = ChessBoardWidget(ChessBoard(chess.Board()))
@@ -75,11 +73,10 @@ class MainWindow(QWidget):
             def progress_callback(progress: float):
                 print(progress)
 
-            def finish_callback(result):
+            def finish_callback(result: tuple[list[tuple[int, int]], cv2.typing.MatLike]):
                 try:
-                    game_list, img = result
-
-                    self.file_uploader.setOpencvImage(img)
+                    game_list, result_img = result
+                    self.file_uploader.setOpencvImage(result_img)
 
                     new_board = chess.Board()
                     for (cell, detected_class) in game_list:

@@ -7,12 +7,12 @@ from PySide6.QtCore import Qt
 
 
 class FileUploader(QLabel):
-    def __init__(self, callback: Callable[[object, str], None] | None = None):
+    def __init__(self, callback: Callable[['FileUploader', str], None] | None = None):
         super().__init__("Drag and Drop a File Here")
 
         self.file_upload_callback = callback
 
-        self.setAlignment(Qt.AlignCenter)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setStyleSheet("border: 2px dashed #aaa;")
         self.setAcceptDrops(True)
 
