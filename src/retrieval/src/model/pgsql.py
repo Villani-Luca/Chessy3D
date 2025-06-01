@@ -1,6 +1,7 @@
 from src.retrieval.src.model.game import Game
 
 import psycopg
+from pgvector.psycopg import register_vector
 
 from datetime import datetime
 import typing
@@ -9,6 +10,7 @@ class Connection:
     def __init__(self, connection_string: str) -> None:
         self.conn: psycopg.Connection = psycopg.connect(connection_string)
         self.cursor: psycopg.Cursor = self.conn.cursor()
+        register_vector(self.conn)
 
     # Should be called only from the Connection not from the repositories
     def commit(self):
@@ -38,17 +40,18 @@ class PgMovesRepository:
         '''
         necessitá del commit subito dopo
         '''
-        if(len(moves) == 0):
-            return
-
-        self.conn.cursor.execute("""CREATE TEMPORARY TABLE temp_moves AS SELECT * from moves LIMIT 0""")
-        #with self.conn.cursor.copy("""COPY temp_moves (gameid, embeddingid) FROM STDIN (FORMAT BINARY)""") as copy:
-        with self.conn.cursor.copy("""COPY temp_moves (gameid, embeddingid) FROM STDIN""") as copy:
-            for move in moves:
-                copy.write_row(move)
-
-        self.conn.cursor.execute("""INSERT INTO moves (gameid, embeddingid) SELECT gameid, embeddingid FROM temp_moves ON CONFLICT DO NOTHING""")
-        self.conn.cursor.execute("""DROP TABLE temp_moves""")
+        pass
+        # if(len(moves) == 0):
+        #     return
+        #
+        # self.conn.cursor.execute("""CREATE TEMPORARY TABLE temp_moves AS SELECT * from moves LIMIT 0""")
+        # #with self.conn.cursor.copy("""COPY temp_moves (gameid, embeddingid) FROM STDIN (FORMAT BINARY)""") as copy:
+        # with self.conn.cursor.copy("""COPY temp_moves (gameid, embeddingid) FROM STDIN""") as copy:
+        #     for move in moves:
+        #         copy.write_row(move)
+        #
+        # self.conn.cursor.execute("""INSERT INTO moves (gameid, embeddingid) SELECT gameid, embeddingid FROM temp_moves ON CONFLICT DO NOTHING""")
+        # self.conn.cursor.execute("""DROP TABLE temp_moves""")
 
 class PgGamesRepository:
     conn: Connection = None
@@ -64,6 +67,23 @@ class PgGamesRepository:
             """SELECT id, moves FROM games WHERE id >= %s ORDER BY id LIMIT %s""" if maxsentileid is None else """SELECT id, moves FROM games WHERE id >= %s AND id <= %s ORDER BY id LIMIT %s""",
             (sentinelid, limit) if maxsentileid is None else (sentinelid, maxsentileid, limit),
             prepare=True
+        ).fetchall()
+
+    def get_best_games_from_naiveposition(self, position: str):
+        return self.conn.cursor.execute(
+            """
+            SELECT * 
+            FROM games g
+            JOIN moves m on g.id = m.gameid
+            where m.embeddingid in (	
+                select v.embeddingid
+                from temp_naivevectors v
+                ORDER BY v.embedding <~> %s
+                LIMIT 5
+            ) 
+            limit 10
+            """
+            (position,)
         ).fetchall()
 
     def get_games_from_move(self, move_id: str, limit = 5):
