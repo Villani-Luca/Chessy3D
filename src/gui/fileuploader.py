@@ -1,7 +1,7 @@
 from enum import StrEnum
 from typing import Callable
 import cv2
-from PySide6.QtWidgets import QLabel, QTabWidget, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QLabel, QTabWidget, QVBoxLayout, QWidget, QFileDialog, QPushButton
 from PySide6.QtGui import QPixmap, QImage, QDragEnterEvent, QDropEvent
 from PySide6.QtCore import Qt
 
@@ -24,14 +24,26 @@ class FileUploader(QWidget):
         self.tabs = QTabWidget(self)
         self.tab_names = [e.value for e in FileUploader.Tabs]
         self.image_labels = {}
+        self.download_buttons = {}
 
         for name in self.tab_names:
+            tab_widget = QWidget()
+            tab_layout = QVBoxLayout(tab_widget)
             label = QLabel("Drag and Drop a File Here")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setStyleSheet("border: 2px dashed #aaa;")
             label.setAcceptDrops(False)  # Disable drop for individual labels
-            self.tabs.addTab(label, name.capitalize())
+
+            download_button = QPushButton("Download Image")
+            download_button.clicked.connect(lambda _, n=name: self.download_image(n))
+            download_button.setEnabled(False)
+
+            tab_layout.addWidget(label)
+            tab_layout.addWidget(download_button)
+
+            self.tabs.addTab(tab_widget, name.capitalize())
             self.image_labels[name] = label
+            self.download_buttons[name] = download_button
 
         layout.addWidget(self.tabs)
         self.setLayout(layout)
@@ -57,6 +69,15 @@ class FileUploader(QWidget):
         pixmap = QPixmap.fromImage(q_image).scaled(self.size())
         self.image_labels[tab_name].setPixmap(pixmap)
         self.image_labels[tab_name].setText("")
+        self.download_buttons[tab_name].setEnabled(True)
+
+    def download_image(self, tab_name: str):
+        label = self.image_labels[tab_name]
+        pixmap = label.pixmap()
+        if pixmap:
+            file_path, _ = QFileDialog.getSaveFileName(self, "Save Image", f"{tab_name}.png", "Images (*.png *.jpg *.bmp)")
+            if file_path:
+                pixmap.save(file_path)
 
     def dragEnterEvent(self, event: QDragEnterEvent):
         if event.mimeData().hasUrls():
@@ -73,6 +94,7 @@ class FileUploader(QWidget):
 
                 self.image_labels[FileUploader.Tabs.ORIGINAL.value].setPixmap(pixmap)
                 self.image_labels[FileUploader.Tabs.ORIGINAL.value].setText("")  # Remove placeholder text
+                self.download_buttons[FileUploader.Tabs.ORIGINAL.value].setEnabled(True)
 
                 if self.file_upload_callback is not None:
                     self.file_upload_callback(self, file_path)
