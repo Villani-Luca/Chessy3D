@@ -82,7 +82,7 @@ class MainWindow(QWidget):
             img, resized = chess_localization.chessboard_localization_resize(filename)
 
             self.chess_widget.draw_board(chess.Board(None))
-            rgb_image, corners_list, squares_data_original, img = chess_localization.auto_chessboard_localization(img,resized)
+            rgb_image, corners_list, squares_data_original, img, best_canny, best_hough, polygons_image = chess_localization.auto_chessboard_localization(img,resized)
 
             # make prediction
             results = yolo(img)  # path to test image
@@ -94,7 +94,6 @@ class MainWindow(QWidget):
 
             game_list = []
             for result in results:  # results is model's prediction
-                print(result.boxes.xyxy)
                 for idx, box in enumerate(result.boxes.xyxy):  # box with xyxy format, (N, 4)
 
                     x1, y1, x2, y2 = int(box[0]), int(box[1]), int(box[2]), int(box[3])  # take coordinates
@@ -118,8 +117,10 @@ class MainWindow(QWidget):
                     color = class_colors.get(class_id, (255, 255, 255))  # Default to white if class not in mapping
                     cv2.rectangle(rgb_image, (x1, y1), (x2, y2), color, 8)
 
-            print("finish callback")
-            self.file_uploader.set_opencv_image(rgb_image)
+            self.file_uploader.set_opencv_image(best_canny, FileUploader.Tabs.CANNY)
+            self.file_uploader.set_opencv_image(best_hough, FileUploader.Tabs.HOUGH)
+            self.file_uploader.set_opencv_image(polygons_image, FileUploader.Tabs.SQUARES)
+            self.file_uploader.set_opencv_image(rgb_image, FileUploader.Tabs.FINAL)
             new_board = chess.Board(None)
             for (cell, detected_class) in game_list:
                 piece = chess.Piece(piece_mapping[detected_class], chess.WHITE if detected_class < 6 else chess.BLACK)

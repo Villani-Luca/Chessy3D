@@ -83,9 +83,10 @@ def find_best_squares_hough(images: list[cv2.typing.MatLike], scale_factor: floa
     best_valid_square_image = None
     best_valid_square_image_square_count = 0
     best_square_approx = []
+    best_idx = None
 
 
-    for black_image in images:
+    for idx, black_image in enumerate(images):
         current_valid_square_count = 0
 
         # Look for valid squares and check if squares are inside of board
@@ -148,11 +149,13 @@ def find_best_squares_hough(images: list[cv2.typing.MatLike], scale_factor: floa
             best_valid_square_image = valid_squares_image
             best_valid_square_image_square_count = current_valid_square_count
             best_square_approx = square_approx
+            best_idx = idx
 
     return (
         best_valid_square_image,
         best_valid_square_image_square_count,
-        best_square_approx
+        best_square_approx,
+        best_idx
     )
 
 def extract_features(approx):
@@ -248,12 +251,12 @@ def find_best_fitting_enclosing_square(image: cv2.typing.MatLike):
 def chessboard_best_hough(image, canny_params, upsize_factor, scale_factor):
     canny_images = canny_multiple(image, canny_params, upsize_factor)
     hough_images = hough_multiple(canny_images)
-    _, _, best_square_approx = find_best_squares_hough(hough_images, scale_factor)
+    _, _, best_square_approx, best_idx = find_best_squares_hough(hough_images, scale_factor)
 
 def find_chessboard(image: cv2.typing.MatLike, canny_params, upsize_factor, scale_factor):
     canny_images = canny_multiple(image, canny_params, upsize_factor)
     hough_images = hough_multiple(canny_images)
-    _, _, best_square_approx = find_best_squares_hough(hough_images, scale_factor)
+    _, _, best_square_approx, best_idx = find_best_squares_hough(hough_images, scale_factor)
 
     if best_square_approx is None:
         raise ValueError("No best square image found")
@@ -264,7 +267,7 @@ def find_chessboard(image: cv2.typing.MatLike, canny_params, upsize_factor, scal
 
     # Define the four source points (replace with actual coordinates)
     corners_list = np.float32([top_left, top_right, bottom_left, bottom_right])
-    return corners_list
+    return corners_list, canny_images[best_idx], hough_images[best_idx], valid_polygons_image, best_idx
 
 
 chessboard_rows, chessboard_cols = 8, 8  # 8x8 chessboard
@@ -348,14 +351,18 @@ def draw_chessboard_squares(image: cv2.typing.MatLike, squares, corners, color=(
             cv2.line(image, bottom_left, bottom_right, (0, 255, 0), 8)  # Bottom line
 
     # Mark the extreme points
-    corners = corners.astype(int)
+    draw_chessboard_corners(corners, image, text_color)
 
+
+def draw_chessboard_corners(corners, image, text_color = (0, 0, 0)):
+    corners = corners.astype(int)
     cv2.circle(image, corners[0], 15, (0, 0, 255), -1)  # blue for top-left
     cv2.circle(image, corners[1], 15, (0, 255, 0), -1)  # green for top-right
-    cv2.circle(image, corners[2], 15, (255, 0,0), -1)  # red for bottom-left
+    cv2.circle(image, corners[2], 15, (255, 0, 0), -1)  # red for bottom-left
     cv2.circle(image, corners[3], 15, (255, 255, 0), -1)  # yellow for bottom-right
 
     cv2.putText(image, "TOP LEFT", corners[0], cv2.FONT_HERSHEY_SIMPLEX, 3, text_color, 2, cv2.LINE_AA)
     cv2.putText(image, "TOP RIGHT", corners[1], cv2.FONT_HERSHEY_SIMPLEX, 3, text_color, 2, cv2.LINE_AA)
     cv2.putText(image, "BOTTOM LEFT", corners[2], cv2.FONT_HERSHEY_SIMPLEX, 3, text_color, 2, cv2.LINE_AA)
     cv2.putText(image, "BOTTOM RIGHT", corners[3], cv2.FONT_HERSHEY_SIMPLEX, 3, text_color, 2, cv2.LINE_AA)
+    return image

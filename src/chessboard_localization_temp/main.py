@@ -1,7 +1,7 @@
 import cv2
 import itertools
 from src.chessboard_localization_temp.localization import draw_chessboard_squares, find_chessboard, \
-    find_chessboard_squares, canny_multiple, hough_multiple, find_best_squares_hough
+    find_chessboard_squares, canny_multiple, hough_multiple, find_best_squares_hough, draw_chessboard_corners
 
 
 # Path of Image that you want to convert
@@ -41,10 +41,12 @@ def auto_chessboard_localization(image, resized_image):
     canny_threshold_2 = [50, 100, 200, 300, 400, 500]
     params = [x for x in itertools.product(canny_threshold_1, canny_threshold_2)]
 
-    corners_list = find_chessboard(gray_image, params, upsize_factor, scale_factor)
+    corners_list, best_canny, best_hough, polygons_image, best_idx = find_chessboard(gray_image, params, upsize_factor, scale_factor)
     squares_data_original = find_chessboard_squares(corners_list)
+    polygons_image = draw_chessboard_corners(corners_list, cv2.cvtColor(polygons_image, cv2.COLOR_GRAY2BGR))
+    print("best params: ", params[best_idx])
 
     # Display the result
     resized_image_copy = resized_image.copy()
     draw_chessboard_squares(resized_image, squares_data_original, corners_list)
-    return resized_image, corners_list, squares_data_original, resized_image_copy
+    return resized_image, corners_list, squares_data_original, resized_image_copy, best_canny, best_hough, polygons_image
