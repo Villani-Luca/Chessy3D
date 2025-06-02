@@ -1,6 +1,7 @@
 from enum import StrEnum
 from typing import Callable
 import cv2
+from PyQt6.QtCore import QSize
 from PySide6.QtWidgets import QLabel, QTabWidget, QVBoxLayout, QWidget, QFileDialog, QPushButton
 from PySide6.QtGui import QPixmap, QImage, QDragEnterEvent, QDropEvent
 from PySide6.QtCore import Qt
@@ -22,9 +23,9 @@ class FileUploader(QWidget):
 
         # Tab widget with four tabs
         self.tabs = QTabWidget(self)
-        self.tab_names = [e.value for e in FileUploader.Tabs]
-        self.image_labels = {}
-        self.download_buttons = {}
+        self.tab_names = list([e for e in FileUploader.Tabs])
+        self.image_labels: dict[FileUploader.Tabs, QLabel] = {}
+        self.download_buttons: dict[FileUploader.Tabs, QPushButton] = {}
 
         for name in self.tab_names:
             tab_widget = QWidget()
@@ -33,6 +34,7 @@ class FileUploader(QWidget):
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setStyleSheet("border: 2px dashed #aaa;")
             label.setAcceptDrops(False)  # Disable drop for individual labels
+            label.setFixedSize(550, 550)
 
             download_button = QPushButton("Download Image")
             download_button.clicked.connect(lambda _, n=name: self.download_image(n))
@@ -90,11 +92,12 @@ class FileUploader(QWidget):
         if urls:
             file_path = urls[0].toLocalFile()
             if file_path.lower().endswith(('png', 'jpg', 'jpeg', 'bmp', 'gif')):
-                pixmap = QPixmap(file_path).scaled(self.size())
+                size = self.image_labels[FileUploader.Tabs.ORIGINAL].size()
+                pixmap = QPixmap(file_path).scaled(size)
 
-                self.image_labels[FileUploader.Tabs.ORIGINAL.value].setPixmap(pixmap)
-                self.image_labels[FileUploader.Tabs.ORIGINAL.value].setText("")  # Remove placeholder text
-                self.download_buttons[FileUploader.Tabs.ORIGINAL.value].setEnabled(True)
+                self.image_labels[FileUploader.Tabs.ORIGINAL].setPixmap(pixmap)
+                self.image_labels[FileUploader.Tabs.ORIGINAL].setText("")  # Remove placeholder text
+                self.download_buttons[FileUploader.Tabs.ORIGINAL].setEnabled(True)
 
                 if self.file_upload_callback is not None:
                     self.file_upload_callback(self, file_path)
