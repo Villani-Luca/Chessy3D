@@ -160,7 +160,7 @@ if __name__ == "__main__":
         #"milvus_collection": NAIVE_COLLECTION_NAME,
         "object_detection_yolo": r"D:\Projects\Uni\Chessy3D\src\object_detection_yolo\chess-model-yolov8m.pt",
         "piece_mapping": piece_mapping_yolo1,
-        # "object_detection_yolo": r"D:\Projects\Uni\Chessy3D\src\object_detection_yolo\best_final.pt"
+        # "object_detection_yolo": r"D:\Projects\Uni\Chessy3D\src\object_detection_yolo\best_final.pt",
         # "piece_mapping": piece_mapping_yolo2,
         "debug": True,
     }
