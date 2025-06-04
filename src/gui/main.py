@@ -15,19 +15,35 @@ from src.retrieval.src.model.pgsql import Connection, PgGamesRepository
 import src.chessboard_localization_temp.main as chess_localization
 from src.retrieval.src.position_embeddings import NaivePositionEmbedder
 
-piece_mapping = {
-    9: chess.PAWN,  # white-pawn
-    3: chess.PAWN,  # black-pawn
-    8: chess.KNIGHT,  # white-knight
-    2: chess.KNIGHT,  # black-knight
-    0: chess.BISHOP,  # white-bishop
-    6: chess.BISHOP,  # black-bishop
-    11: chess.ROOK,  # white-rook
-    5: chess.ROOK,  # black-rook
-    10: chess.QUEEN,  # white-queen
-    4: chess.QUEEN,  # black-queen
-    7: chess.KING,  # white-king
-    1: chess.KING,  # black-king
+# yolo chess-model-yolov8m
+piece_mapping_yolo1 = {
+    0:  (chess.BISHOP,  chess.WHITE, (0, 100, 0)    ),  # white-bishop
+    1:  (chess.KING,    chess.WHITE, (0, 0, 139)    ),  # white-king
+    2:  (chess.KNIGHT,  chess.WHITE, (0, 85, 170)   ),  # white-knight
+    3:  (chess.PAWN,    chess.WHITE, (80, 80, 80)   ),  # white-pawn
+    4:  (chess.QUEEN,   chess.WHITE, (64, 0, 64)    ),  # white-queen
+    5:  (chess.ROOK,    chess.WHITE, (139, 0, 0)    ),  # white-rook
+    6:  (chess.BISHOP,  chess.BLACK, (0, 255, 0)    ),  # black-bishop
+    7:  (chess.KING,    chess.BLACK, (0, 0, 255)    ),  # black-king
+    8:  (chess.KNIGHT,  chess.BLACK, (0, 165, 255)  ),  # black-knight
+    9:  (chess.PAWN,    chess.BLACK, (200, 200, 200)),  # black-pawn
+    10: (chess.QUEEN,   chess.BLACK, (128, 0, 128)  ),  # black-queen
+    11: (chess.ROOK,    chess.BLACK, (255, 0, 0)    ),  # black-rook
+}
+
+piece_mapping_yolo2 = {
+    0:  (chess.PAWN,    chess.BLACK, (80, 80, 80)   ),  # black-pawn
+    1:  (chess.ROOK,    chess.BLACK, (139, 0, 0)    ),  # black-rook
+    2:  (chess.KNIGHT,  chess.BLACK, (0, 85, 170)   ),  # black-knight
+    3:  (chess.BISHOP,  chess.BLACK, (0, 100, 0)    ),  # black-bishop
+    4:  (chess.QUEEN,   chess.BLACK, (64, 0, 64)    ),  # black-queen
+    5:  (chess.KING,    chess.BLACK, (0, 0, 139)    ),  # black-king
+    6:  (chess.PAWN,    chess.WHITE, (200, 200, 200)),  # white-pawn
+    7:  (chess.ROOK,    chess.WHITE, (255, 0, 0)    ),  # white-rook
+    8:  (chess.KNIGHT,  chess.WHITE, (0, 165, 255)  ),  # white-knight
+    9:  (chess.BISHOP,  chess.WHITE, (0, 255, 0)    ),  # white-bishop
+    10: (chess.QUEEN,   chess.WHITE, (128, 0, 128)  ),  # white-queen
+    11: (chess.KING,    chess.WHITE, (0, 0, 255)    ),  # white-king
 }
 
 class MainWindow(QWidget):
@@ -37,20 +53,8 @@ class MainWindow(QWidget):
         # CONST
         pg_conn = args['pgconn']
         yolo_path = args['object_detection_yolo']
-        class_colors = {
-            9: (200, 200, 200),  # white-pawn
-            3: (80, 80, 80),  # black-pawn
-            8: (0, 165, 255),  # white-knight
-            2: (0, 85, 170),  # black-knight
-            0: (0, 255, 0),  # white-bishop
-            6: (0, 100, 0),  # black-bishop
-            11: (255, 0, 0),  # white-rook
-            5: (139, 0, 0),  # black-rook
-            10: (128, 0, 128),  # white-queen
-            4: (64, 0, 64),  # black-queen
-            7: (0, 0, 255),  # white-king
-            1: (0, 0, 139),  # black-king
-        }
+        piece_mapping = args['piece_mapping']
+        debug = args["debug"]
 
         self.setWindowTitle("Chessy 3D")
         self.threadpool = QThreadPool()
@@ -67,7 +71,7 @@ class MainWindow(QWidget):
         # Create widgets
         print("Setting up widgets...")
 
-        self.chess_widget = ChessBoardWidget(ChessBoard(chess.Board(None)))
+        self.chess_widget = ChessBoardWidget(ChessBoard(chess.Board(None), debug=debug))
 
         def refresh_datagrid():
             embedding = self.chess_widget.retrieve_embedding(position_embedder)
@@ -102,7 +106,7 @@ class MainWindow(QWidget):
                     # find middle of bounding boxes for x and y
                     x_mid = int((x1 + x2) / 2)
                     # add padding to y values
-                    y_mid = y2 - 30
+                    y_mid = y2 - 50
 
                     for cell_value, coordinates in coord_dict.items():
                         x_values = [point[0] for point in coordinates]
@@ -114,7 +118,7 @@ class MainWindow(QWidget):
                             break
 
                     # custom draw yolo result on image
-                    color = class_colors.get(class_id, (255, 255, 255))  # Default to white if class not in mapping
+                    color = piece_mapping.get(class_id, (255, 255, 255))[2]  # Default to white if class not in mapping
                     cv2.rectangle(rgb_image, (x1, y1), (x2, y2), color, 8)
 
             self.file_uploader.set_opencv_image(best_canny, FileUploader.Tabs.CANNY)
@@ -123,7 +127,7 @@ class MainWindow(QWidget):
             self.file_uploader.set_opencv_image(rgb_image, FileUploader.Tabs.FINAL)
             new_board = chess.Board(None)
             for (cell, detected_class) in game_list:
-                piece = chess.Piece(piece_mapping[detected_class], chess.WHITE if detected_class < 6 else chess.BLACK)
+                piece = chess.Piece(piece_mapping[detected_class][0], piece_mapping[detected_class][1])
                 new_board.set_piece_at(cell - 1, piece)
 
             self.chess_widget.draw_board(new_board)
@@ -154,8 +158,11 @@ if __name__ == "__main__":
         'pgconn': r"host=localhost user=postgres password=password dbname=chessy",
         #"milvus_url": r"http://localhost:19530",
         #"milvus_collection": NAIVE_COLLECTION_NAME,
-        #"object_detection_yolo": r"D:\Projects\Uni\Chessy3D\src\object_detection_yolo\best_yolo_e200_small.pt",
-        "object_detection_yolo": r"D:\Projects\Uni\Chessy3D\src\object_detection_yolo\chess-model-yolov8m.pt"
+        "object_detection_yolo": r"D:\Projects\Uni\Chessy3D\src\object_detection_yolo\chess-model-yolov8m.pt",
+        "piece_mapping": piece_mapping_yolo1,
+        # "object_detection_yolo": r"D:\Projects\Uni\Chessy3D\src\object_detection_yolo\best_final.pt"
+        # "piece_mapping": piece_mapping_yolo2,
+        "debug": True,
     }
 
 
