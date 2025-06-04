@@ -14,9 +14,8 @@ SPLIT_SIZE = 5000
 ONLY_ONE = False
 TEMP_FILE_NAME = 'temp_lumbras'
 
-def split_large_file(input_path, output_path, output_prefix='split_part', starting_number = 0, starting_file_number = 1):
+def split_large_file(input_path, output_path, starting_number = 0, starting_file_number = 1):
     file_counter = starting_file_number
-    filename = input_path.name.split('.')[0]
     temp_filename = f"{output_path}/{TEMP_FILE_NAME}"
 
     output_file = open(temp_filename, "w", encoding="utf-8")

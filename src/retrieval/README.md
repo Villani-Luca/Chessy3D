@@ -65,3 +65,10 @@ to then construct an inverse index with the previous created tokens
 
 # 05/05/2025
 praticamente tutto il tempo é stato usato per caricare e creare i vettori dentro milvus, problemi con chroma per lentezza.
+
+# 01/06/2025
+passatto da milvus a pgvector per limitazione di memoria.
+
+per semplificare abbiamo usato un sottoinsieme delle 350mln di posizioni uniche trovate, usand solo 100mln
+i vettori sono degli embedding binari di 768 bit 64x6x2 la cui distanza tra loro é valutata tramite hamming distance,
+equivalente alla distanza L1 per vettori binari.

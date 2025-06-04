@@ -6,6 +6,8 @@ from PySide6.QtGui import QPixmap, QColor, QBrush
 from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsRectItem, QGraphicsPixmapItem, QWidget, \
     QVBoxLayout, QHBoxLayout, QPushButton
 
+from src.retrieval.src.position_embeddings import PositionEmbedder
+
 
 class ChessBoard(QGraphicsView):
     loaded_pixmap: dict[int, QPixmap]
@@ -27,7 +29,10 @@ class ChessBoard(QGraphicsView):
         super().resizeEvent(event)
         self.draw_board()
 
-    def draw_board(self):
+    def draw_board(self, board = None):
+        if board is not None:
+            self.board = board
+
         scene = self.scene()
         scene.clear()
 
@@ -72,8 +77,7 @@ class ChessBoard(QGraphicsView):
                 new_row, new_col = 7 - col, row
                 new_square = new_row * 8 + new_col
                 new_board.set_piece_at(new_square, piece)
-        self.board = new_board
-        self.draw_board()
+        self.draw_board(new_board)
 
     def rotate_board_right(self):
         new_board = chess.Board(None)
@@ -84,8 +88,10 @@ class ChessBoard(QGraphicsView):
                 new_row, new_col = col, 7 - row
                 new_square = new_row * 8 + new_col
                 new_board.set_piece_at(new_square, piece)
-        self.board = new_board
-        self.draw_board()
+        self.draw_board(new_board)
+
+    def retrieve_embedding(self, embedder: PositionEmbedder):
+        return embedder.embedding(self.board)
 
 class ChessBoardWidget(QWidget):
     def __init__(self, board: ChessBoard):
@@ -105,5 +111,8 @@ class ChessBoardWidget(QWidget):
         button_layout.addWidget(self.rotate_right_btn)
         layout.addLayout(button_layout)
 
-    def draw_board(self):
-        self.chess_view.draw_board()
+    def draw_board(self, board = None):
+        self.chess_view.draw_board(board)
+
+    def retrieve_embedding(self, embedder: PositionEmbedder):
+        return self.chess_view.retrieve_embedding(embedder)

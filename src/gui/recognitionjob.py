@@ -1,6 +1,6 @@
 import cv2
 import ultralytics
-from PySide6.QtCore import Signal, QThreadPool
+from PySide6.QtCore import Signal
 
 import src.chessboard_localization_temp.main as chess_localization
 from src.gui.worker import Worker, WorkerSignals
@@ -12,22 +12,22 @@ class RecognitionJob(Worker):
     def __init__(self,
                  img: cv2.typing.MatLike,
                  resized_image: cv2.typing.MatLike,
-                 recog_yolo_path: str):
+                 yolo: ultralytics.YOLO):
         super().__init__(RecognitionJobSignals())
 
         # Store constructor arguments (re-used for processing)
         self.img = img
         self.resized_image = resized_image
-        self.recog_yolo_path = recog_yolo_path
-
-        self.signals = RecognitionJobSignals()
+        self.yolo = yolo
 
     def execute(self):
         _, squares_data_original, img, rgb_image = self.__chessboard_localization()
         self.signals.update_image.emit(rgb_image)
+        self.signals.progress.emit(50, "Chessboard localized")
 
         game_list, result_plot = self.__piece_recognition(img, rgb_image, squares_data_original)
-        return (game_list, result_plot)
+        self.signals.progress.emit(100, "Pieces recognition complete")
+        return game_list, result_plot
 
     def __chessboard_localization(self):
         (
@@ -58,10 +58,8 @@ class RecognitionJob(Worker):
     }
 
     def __piece_recognition(self, image, outimage, squares_data_original):
-        model = ultralytics.YOLO(self.recog_yolo_path)
-
         # make prediction
-        results = model(image)  # path to test image
+        results = self.yolo(image)  # path to test image
 
         coord_dict = {}
         for cell, coordinate in enumerate(squares_data_original, start=1):
@@ -70,6 +68,7 @@ class RecognitionJob(Worker):
 
         game_list = []
         for result in results:  # results is model's prediction
+            print(result.boxes.xyxy)
             for idx, box in enumerate(result.boxes.xyxy):  # box with xyxy format, (N, 4)
 
                 x1, y1, x2, y2 = int(box[0]), int(box[1]), int(box[2]), int(box[3])  # take coordinates
