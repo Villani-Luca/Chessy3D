@@ -4,7 +4,7 @@ import chess
 from PySide6.QtCore import Qt, QRectF
 from PySide6.QtGui import QPixmap, QColor, QBrush
 from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsRectItem, QGraphicsPixmapItem, QWidget, \
-    QVBoxLayout, QHBoxLayout, QPushButton
+    QVBoxLayout, QHBoxLayout, QPushButton, QGraphicsSimpleTextItem
 
 from src.retrieval.src.position_embeddings import PositionEmbedder
 
@@ -13,9 +13,10 @@ class ChessBoard(QGraphicsView):
     loaded_pixmap: dict[int, QPixmap]
     cell_size: float
 
-    def __init__(self, board: chess.Board):
+    def __init__(self, board: chess.Board, debug = False):
         super().__init__()
 
+        self.debug = debug
         self.loaded_pixmap = {}
 
         self.setScene(QGraphicsScene(self))
@@ -50,6 +51,16 @@ class ChessBoard(QGraphicsView):
                 scene.addItem(square)
 
                 position = (7 - row) * 8 + col
+
+                if self.debug:
+                    label = f"{position + 1}"
+                    text_item = QGraphicsSimpleTextItem(label)
+                    text_item.setBrush(QBrush("black"))
+                    text_item.setZValue(1)  # make sure it's on top of the board
+                    # Position below the last row
+                    text_item.setPos(col * self.cell_size + 2, row * self.cell_size + 2)
+                    scene.addItem(text_item)
+
                 piece = self.board.piece_at(position)
                 if piece is not None:
                     self.draw_piece(row, col, piece)

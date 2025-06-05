@@ -68,7 +68,7 @@ class FileUploader(QWidget):
             QImage.Format.Format_BGR888 if color else QImage.Format.Format_Grayscale8
         )
 
-        pixmap = QPixmap.fromImage(q_image).scaled(self.size())
+        pixmap = QPixmap.fromImage(q_image).scaled(self.image_labels[tab_name].size())
         self.image_labels[tab_name].setPixmap(pixmap)
         self.image_labels[tab_name].setText("")
         self.download_buttons[tab_name].setEnabled(True)
