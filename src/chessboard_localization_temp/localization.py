@@ -238,12 +238,7 @@ def find_best_fitting_enclosing_square(image: cv2.typing.MatLike):
     contours, _ = cv2.findContours(closed_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     cnt = max(contours, key=cv2.contourArea)
-    rect = cv2.minAreaRect(cnt)
-    box = cv2.boxPoints(rect)
-    box = np.intp(box)
-
     best_fitting_square = cv2.approxPolyN(cnt, 4)
-    approx = cv2.approxPolyN(best_fitting_square, 4)
 
     # Initialize variables to store extreme points
     return sort_quadrilateral_approx(best_fitting_square[0])
