@@ -63,53 +63,56 @@ become crucial tasks in the field of computer vision, with
 applications ranging from object recognition and tracking
 to augmented reality and autonomous driving.
 
-Identifying
-keypoints on vehicles from different perspectives poses sig-
-nificant challenges. Traditional methods often rely on ex-
-tensive manual annotation, which is both time-consuming
-and prone to errors. Moreover, models trained on synthetic
-data frequently suffer from domain-shift when applied to
-real-world images, resulting in decreased performance.
-This study aims to address these challenges by develop-
-ing a comprehensive keypoint detection framework inspired
-by FastTrakAI [1], thus focusing on enhancing automotive
-safety and efficiency through innovative AI solutions. How-
-ever, the inherent variability in the shapes, sizes, and ap-
-pearances of these vehicles presents significant challenges
-for developing robust keypoint detection models. Our ap-
-proach involves identifying a set of 3D models representing
-a category of vehicles and defining a set of keypoints com-
-mon to all vehicles. This step ensures that our approach is
-adaptable across various vehicle types. To build our dataset,
-we rendered over 2000 images of these vehicles from dif-
-ferent perspectives and enriched them with keypoint anno-
-tations. To avoid the laborious task of manually annotating
-each image, we devised a strategy that automates a signifi-
-cant portion of this process. After creating the dataset, we
-trained a keypoint detection model tailored to these anno-
-tated images. We then rigorously tested the model on cap-
-tures of a 3D model never seen during the training phase.
-This testing approach evaluates the model’s robustness and
-its ability to generalize to new, unseen data. By following
-this methodology, we aimed to develop a keypoint detection
-system that is both accurate and robust, capable of handling
-the variability inherent in vehicle categories. The insights
-gained from this research can contribute to the advancement
-of computer vision technologies in the automotive industry
-and beyond, fulfilling the objectives of FastTrakAI by DAT
-and Prometeia to push the boundaries of AI-driven automo-
-tive innovation..
+Identifying corners in images is a fundamental
+problem in computer vision, with applications in
+object recognition, image stitching, and 3D reconstruction.
+Chessboard detection is a specific case of keypoint detection
+that has gained significant attention due to its
+importance in camera calibration, pose estimation, and
+robotics. The chessboard pattern provides a regular and
+structured grid that can be easily detected and used to
+estimate the camera's intrinsic and extrinsic parameters.
+In this paper, we present an approach for chessboard corners detection
+and chess-pieces object detection using deep learning
+and geometric constraints. Our method is designed to
+handle the challenges posed by the variability of chessboard
+photos, including different lighting conditions, angles,
+and chessboard designs.
 
-\section{Chessboard Corners Detection}
+We have been through a series of steps to achieve our goal:
+\begin{itemize}
+    \item We started with the chessboard corners detection, using a combination of deep learning and geometric constraints to accurately identify the keypoints on the chessboard.
+    \item We then moved on to chessboard squares detection, which involves detecting the individual squares on the chessboard.
+    \item Next, we focused on chess-pieces object detection, using YOLOv8 to detect and classify chess pieces in various conditions.
+    \item After that, we developed a FEN annotation method for converting the chessboard state into a FEN string.
+    \item Finally, we implemented an image similarity search method using one hot encoding and a similarity search algorithm.
+    \item We also conducted a series of experiments to evaluate the performance of our approach, comparing it with existing methods and demonstrating its effectiveness in real-world scenarios.
+\end{itemize}
 
-\section{Chessboard Squares Detection}
+We used two datasets for training and testing our models: ChessRed2K and another small dataset found on Roboflow.
+The rest of the paper is organized as follows: 
+\begin{itemize}
+    \item Section II discusses the related work in chessboard detection and keypoint detection.
+    \item Section III describes the proposed approach for chessboard corners detection.
+    \item Section IV presents the chessboard squares detection method.
+    \item Section V details the chess-pieces object detection using YOLOv8.
+    \item Section VI explains the FEN annotation method.
+    \item Section VII discusses the image similarity search method.
+\end{itemize}
 
-\section{Chess-Pieces Object Detection}
 
-\section{FEN Annotation Method}
 
-\section{Image Similarity Search}
-\section{Conclusion}
+\section{Chessboard Corners Detection} - Davide
+
+\section{Chessboard Squares Detection} - Davide
+
+\section{Chess-Pieces Object Detection} - Luca
+
+\section{FEN Annotation Method}  - Alle Luca
+
+\section{Image Similarity Search} - Alle
+
+\section{Conclusion} - Luca
 
 
 
