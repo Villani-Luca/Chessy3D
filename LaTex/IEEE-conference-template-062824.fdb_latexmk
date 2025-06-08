@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1749377883.80657 "d:/CodeProjects/University/Chessy3D/LaTex/IEEE-conference-template-062824.tex" "IEEE-conference-template-062824.pdf" "IEEE-conference-template-062824" 1749377884.42263 0
+["pdflatex"] 1749378718.8472 "d:/CodeProjects/University/Chessy3D/LaTex/IEEE-conference-template-062824.tex" "IEEE-conference-template-062824.pdf" "IEEE-conference-template-062824" 1749378719.47534 0
   "C:/Users/villa/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1749129613 82507 a9eef8696c92627b87e9975edea03b2a ""
   "C:/Users/villa/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1748363651 24225046 3f843b08fdbb7976019f3d487a65ba7f ""
   "C:/Users/villa/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc" 1458473887 4993 80dc9bab7f31fb78a000ccfed0e27cab ""
@@ -46,10 +46,10 @@
   "C:/Users/villa/AppData/Local/Programs/MiKTeX/tex/latex/l3backend/l3backend-pdftex.def" 1704400941 30006 57b07afb710ee2f649c65cfbafda39c1 ""
   "C:/Users/villa/AppData/Local/Programs/MiKTeX/tex/latex/psnfss/ot1ptm.fd" 1585253778 1007 15056f4a61917ceed3a44e4ac11fcc52 ""
   "C:/Users/villa/AppData/Local/Programs/MiKTeX/tex/latex/xcolor/xcolor.sty" 1700127522 55487 80a65caedd3722f4c20a14a69e785d8f ""
-  "IEEE-conference-template-062824.aux" 1749377884 1070 52fb433ef73930f33fd7939df505a36f "pdflatex"
-  "IEEE-conference-template-062824.tex" 1749377882 7599 6d0b51b15783292b2480d395363fe7a7 ""
+  "IEEE-conference-template-062824.aux" 1749378719 1069 42ca07e3f9f05526db5a68ea6cde13b9 "pdflatex"
+  "IEEE-conference-template-062824.tex" 1749378718 7270 7aceb91cb68288307ce37a3ca0cf4d0e ""
   "IEEEtran.cls" 1749129528 288304 5b2e4fa15b0f7eabb840ebf67df4c0f7 ""
-  "d:/CodeProjects/University/Chessy3D/LaTex/IEEE-conference-template-062824.tex" 1749377882 7599 6d0b51b15783292b2480d395363fe7a7 ""
+  "d:/CodeProjects/University/Chessy3D/LaTex/IEEE-conference-template-062824.tex" 1749378718 7270 7aceb91cb68288307ce37a3ca0cf4d0e ""
   (generated)
   "IEEE-conference-template-062824.aux"
   "IEEE-conference-template-062824.log"
