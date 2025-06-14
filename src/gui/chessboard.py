@@ -4,7 +4,7 @@ import chess
 from PySide6.QtCore import Qt, QRectF
 from PySide6.QtGui import QPixmap, QColor, QBrush
 from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsRectItem, QGraphicsPixmapItem, QWidget, \
-    QVBoxLayout, QHBoxLayout, QPushButton, QGraphicsSimpleTextItem
+    QVBoxLayout, QHBoxLayout, QPushButton, QGraphicsSimpleTextItem, QLineEdit, QApplication, QStyle
 
 from src.retrieval.src.position_embeddings import PositionEmbedder
 
@@ -104,6 +104,9 @@ class ChessBoard(QGraphicsView):
     def retrieve_embedding(self, embedder: PositionEmbedder):
         return embedder.embedding(self.board)
 
+    def get_fen(self):
+        return self.board.fen()
+
 class ChessBoardWidget(QWidget):
     def __init__(self, board: ChessBoard):
         super().__init__()
@@ -118,12 +121,30 @@ class ChessBoardWidget(QWidget):
         self.rotate_left_btn.clicked.connect(self.chess_view.rotate_board_left)
         self.rotate_right_btn.clicked.connect(self.chess_view.rotate_board_right)
 
+        self.fen_textbox = QLineEdit()
+        self.fen_textbox.setReadOnly(True)
+        self.update_fen_textbox()
+
+        self.copy_fen_btn = QPushButton()
+        self.copy_fen_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogStart))
+        self.copy_fen_btn.clicked.connect(self.copy_fen_to_clipboard)
+
         button_layout.addWidget(self.rotate_left_btn)
         button_layout.addWidget(self.rotate_right_btn)
+        button_layout.addWidget(self.fen_textbox)
+        button_layout.addWidget(self.copy_fen_btn)
         layout.addLayout(button_layout)
 
     def draw_board(self, board = None):
         self.chess_view.draw_board(board)
+        self.update_fen_textbox()
 
     def retrieve_embedding(self, embedder: PositionEmbedder):
         return self.chess_view.retrieve_embedding(embedder)
+
+    def update_fen_textbox(self):
+        self.fen_textbox.setText(self.chess_view.get_fen())
+
+    def copy_fen_to_clipboard(self):
+        clipboard = QApplication.clipboard()
+        clipboard.setText(self.fen_textbox.text())
