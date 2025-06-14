@@ -8,9 +8,10 @@ from src.chessboard_localization_temp.localization import draw_chessboard_square
 
 
 # Path of Image that you want to convert
-def chessboard_localization_resize(image_path):
+def chessboard_localization_resize(image_path, size = 1500):
     image = cv2.imread(image_path)
-    resized_image = cv2.resize(image, (3000, 3000))
+    # resized_image = cv2.resize(image, (3000, 3000))
+    resized_image = cv2.resize(image, (size, size))
 
     return  image, resized_image
 
@@ -60,7 +61,7 @@ def auto_chessboard_localization_alt(image, resized_image):
 
     # parameters used for tuning other parameters based on image resolution
     original_size = image.shape[0]
-    resized_size = 3000
+    resized_size = resized_image.shape[0]
     parameters_original_size = 1000
     upsize_factor = resized_size / original_size
     scale_factor = resized_size / parameters_original_size 
@@ -69,7 +70,7 @@ def auto_chessboard_localization_alt(image, resized_image):
 
     thresh, _ = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     canny_image = cv2.Canny(blurred_image, thresh, thresh * 0.5)
-    canny_image = cv2.dilate(canny_image, np.ones((5,5)), iterations=2)
+    canny_image = cv2.dilate(canny_image, np.ones((5,5)), iterations=1)
 
     ############## find candidates contours ####################
     board_contours, hierarchy = cv2.findContours(canny_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
