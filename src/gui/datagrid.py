@@ -3,7 +3,7 @@ from PySide6.QtWidgets import QTableWidget, QLabel, QVBoxLayout, QTableWidgetIte
 
 
 class DataGrid(QTableWidget):
-    def __init__(self, on_refresh_button, headers=["Event", "Date", "White", "White title", "Black", "Black title"]):
+    def __init__(self, on_refresh_button, headers=["Id", "Event", "Date", "White", "White title", "Black", "Black title"]):
         super().__init__()  # Example: 5 rows, 3 columns
 
         # self.setColumnCount(3)
@@ -58,6 +58,6 @@ class DataGrid(QTableWidget):
 
         for row in  range(len(data)):
             for col in range(len(data[row])):
-                self.setItem(row, col, QTableWidgetItem(data[row][col]))
+                self.setItem(row, col, QTableWidgetItem(str(data[row][col])))
 
         self.update_empty_label()

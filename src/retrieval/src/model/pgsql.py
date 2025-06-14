@@ -75,7 +75,7 @@ class PgGamesRepository:
     def get_best_games_from_naiveposition(self, position: np.array):
         return self.conn.cursor.execute(
             """
-            SELECT g.event, g.date, g.white, g.whitetitle, g.black, g.blacktitle
+            SELECT g.id, g.event, g.date, g.white, g.whitetitle, g.black, g.blacktitle
             FROM games g
             WHERE g.id in (
                 SELECT m.gameid

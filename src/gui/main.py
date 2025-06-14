@@ -107,7 +107,7 @@ class MainWindow(QWidget):
                     # find middle of bounding boxes for x and y
                     x_mid = int((x1 + x2) / 2)
                     # add padding to y values
-                    y_mid = y2 - 50
+                    y_mid = y2 - 30
 
                     for cell_value, coordinates in coord_dict.items():
                         x_values = [point[0] for point in coordinates]
@@ -120,7 +120,7 @@ class MainWindow(QWidget):
 
                     # custom draw yolo result on image
                     color = piece_mapping.get(class_id, (255, 255, 255))[2]  # Default to white if class not in mapping
-                    cv2.rectangle(final_image, (x1, y1), (x2, y2), color, 8)
+                    cv2.rectangle(final_image, (x1, y1), (x2, y2), color, 4)
 
             self.file_uploader.set_opencv_image(best_canny, FileUploader.Tabs.CANNY)
             self.file_uploader.set_opencv_image(best_hough, FileUploader.Tabs.HOUGH)
@@ -159,11 +159,11 @@ if __name__ == "__main__":
         'pgconn': r"host=localhost user=postgres password=password dbname=chessy",
         #"milvus_url": r"http://localhost:19530",
         #"milvus_collection": NAIVE_COLLECTION_NAME,
-        "object_detection_yolo": r"E:\projects\uni\Chessy3D\src\object_detection_yolo\chess-model-yolov8m.pt",
-        "piece_mapping": piece_mapping_yolo1,
-        # "object_detection_yolo": r"D:\Projects\Uni\Chessy3D\src\object_detection_yolo\best_final.pt",
-        # "piece_mapping": piece_mapping_yolo2,
-        "debug": True,
+        # "object_detection_yolo": r"E:\projects\uni\Chessy3D\src\object_detection_yolo\chess-model-yolov8m.pt",
+        # "piece_mapping": piece_mapping_yolo1,
+        "object_detection_yolo": r"E:\projects\uni\Chessy3D\src\object_detection_yolo\best_final.pt",
+        "piece_mapping": piece_mapping_yolo2,
+        "debug": False,
     }
 
 
