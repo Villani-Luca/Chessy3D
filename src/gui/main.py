@@ -87,7 +87,7 @@ class MainWindow(QWidget):
 
             self.chess_widget.draw_board(chess.Board(None))
             # rgb_image, corners_list, squares_data_original, img, best_canny, best_hough, polygons_image = chess_localization.auto_chessboard_localization(img,resized)
-            rgb_image, corners_list, squares_data_original, img, best_canny, best_hough, polygons_image = chess_localization.auto_chessboard_localization_alt(img,resized)
+            final_image, corners_list, squares_data_original, img, best_canny, best_hough, polygons_image = chess_localization.auto_chessboard_localization_alt(img,resized)
 
             # make prediction
             results = yolo(img)  # path to test image
@@ -120,12 +120,12 @@ class MainWindow(QWidget):
 
                     # custom draw yolo result on image
                     color = piece_mapping.get(class_id, (255, 255, 255))[2]  # Default to white if class not in mapping
-                    cv2.rectangle(rgb_image, (x1, y1), (x2, y2), color, 8)
+                    cv2.rectangle(final_image, (x1, y1), (x2, y2), color, 8)
 
             self.file_uploader.set_opencv_image(best_canny, FileUploader.Tabs.CANNY)
             self.file_uploader.set_opencv_image(best_hough, FileUploader.Tabs.HOUGH)
             self.file_uploader.set_opencv_image(polygons_image, FileUploader.Tabs.SQUARES)
-            self.file_uploader.set_opencv_image(rgb_image, FileUploader.Tabs.FINAL)
+            self.file_uploader.set_opencv_image(final_image, FileUploader.Tabs.FINAL)
             new_board = chess.Board(None)
             for (cell, detected_class) in game_list:
                 piece = chess.Piece(piece_mapping[detected_class][0], piece_mapping[detected_class][1])
