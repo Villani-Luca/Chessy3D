@@ -400,8 +400,6 @@ def find_best_chessboard_polygon(contours, image_width, image_height):
     best_score = float('inf')  # Lower score is better
     best_idx = None
 
-    image_center = np.array([image_width / 2, image_height / 2])
-
     for i, (approx, n_squares) in enumerate(contours):
         # Check for squareness
         square_score = 0
@@ -430,6 +428,6 @@ def find_best_chessboard_polygon(contours, image_width, image_height):
         if total_score < best_score:
             best_score = total_score
             best_polygon = approx
-            best_index = i
+            best_idx = i
 
-    return i, best_polygon
+    return best_idx, best_polygon
