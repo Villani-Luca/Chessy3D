@@ -76,7 +76,7 @@ def auto_chessboard_localization_alt(image, resized_image):
     no_parent_contours = [x for x in enumerate(hierarchy[0]) if x[1][3] == -1]
     candidates = []
     for i, _ in no_parent_contours:
-        output = process_contours(i, hierarchy[0], board_contours, min=50_000*scale_factor, max=1_400_000*scale_factor)
+        output = process_contours(i, hierarchy[0], board_contours, min=50_000*scale_factor, max=2_000_000*scale_factor)
 
         for i,cnt in output:
             approx = cv2.approxPolyN(cnt, 4, True)
