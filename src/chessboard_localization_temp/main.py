@@ -120,7 +120,20 @@ def auto_chessboard_localization_alt(image, resized_image):
         M_inv = cv2.invert(M)[1]  # Get the inverse of the perspective matrix
 
         working_image = cv2.warpPerspective(canny_image, M, (pwidth, pheight), flags=cv2.INTER_LINEAR)
-        lines = cv2.HoughLinesP(working_image, 1, np.pi / 180, threshold=500, minLineLength=pwidth*0.1, maxLineGap=pwidth*0.5)
+        
+        # Detect horizontal lines
+        horizontal_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (50,1))
+        horizontal_mask = cv2.morphologyEx(working_image, cv2.MORPH_OPEN, horizontal_kernel, iterations=1)
+
+        # Detect vertical lines
+        vertical_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1,50))
+        vertical_mask = cv2.morphologyEx(working_image, cv2.MORPH_OPEN, vertical_kernel, iterations=1)
+        table_mask = cv2.bitwise_or(horizontal_mask, vertical_mask)
+        table_mask = cv2.morphologyEx(table_mask, cv2.MORPH_OPEN, np.ones((3,3)), iterations=1)
+        mask_image = np.zeros_like(working_image)
+        mask_image[np.where(table_mask==255)] = 255
+
+        lines = cv2.HoughLinesP(mask_image, 1, np.pi / 180, threshold=300, minLineLength=pwidth*0.1, maxLineGap=pwidth*0.5)
         hough_image = np.zeros_like(working_image)
         if lines is not None:
             for line in lines:
