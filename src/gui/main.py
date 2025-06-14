@@ -86,7 +86,8 @@ class MainWindow(QWidget):
             img, resized = chess_localization.chessboard_localization_resize(filename)
 
             self.chess_widget.draw_board(chess.Board(None))
-            rgb_image, corners_list, squares_data_original, img, best_canny, best_hough, polygons_image = chess_localization.auto_chessboard_localization(img,resized)
+            # rgb_image, corners_list, squares_data_original, img, best_canny, best_hough, polygons_image = chess_localization.auto_chessboard_localization(img,resized)
+            rgb_image, corners_list, squares_data_original, img, best_canny, best_hough, polygons_image = chess_localization.auto_chessboard_localization_alt(img,resized)
 
             # make prediction
             results = yolo(img)  # path to test image
@@ -158,7 +159,7 @@ if __name__ == "__main__":
         'pgconn': r"host=localhost user=postgres password=password dbname=chessy",
         #"milvus_url": r"http://localhost:19530",
         #"milvus_collection": NAIVE_COLLECTION_NAME,
-        "object_detection_yolo": r"D:\Projects\Uni\Chessy3D\src\object_detection_yolo\chess-model-yolov8m.pt",
+        "object_detection_yolo": r"E:\projects\uni\Chessy3D\src\object_detection_yolo\chess-model-yolov8m.pt",
         "piece_mapping": piece_mapping_yolo1,
         # "object_detection_yolo": r"D:\Projects\Uni\Chessy3D\src\object_detection_yolo\best_final.pt",
         # "piece_mapping": piece_mapping_yolo2,

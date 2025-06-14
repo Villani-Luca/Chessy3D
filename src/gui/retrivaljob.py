@@ -1,14 +1,7 @@
-import chess
-import cv2
 import numpy as np
-import ultralytics
-from PySide6.QtCore import Signal, QThreadPool
 
-import src.chessboard_localization_temp.main as chess_localization
 from src.gui.worker import Worker, WorkerSignals
-from src.retrieval.src.milvus import MilvusRepository
 from src.retrieval.src.model.pgsql import PgGamesRepository
-from src.retrieval.src.position_embeddings import PositionEmbedder
 
 
 class RetrievalJobSignals(WorkerSignals):

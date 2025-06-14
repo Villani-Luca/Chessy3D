@@ -237,6 +237,9 @@ def find_best_fitting_enclosing_square(image: cv2.typing.MatLike):
     closed_image = cv2.morphologyEx(image, cv2.MORPH_CLOSE, np.ones((5,5)), iterations=3)
     contours, _ = cv2.findContours(closed_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
+    if len(contours) == 0:
+        return None
+
     cnt = max(contours, key=cv2.contourArea)
     best_fitting_square = cv2.approxPolyN(cnt, 4)
 
@@ -361,3 +364,70 @@ def draw_chessboard_corners(corners, image, text_color = (0, 0, 0)):
     cv2.putText(image, "BOTTOM LEFT", corners[2], cv2.FONT_HERSHEY_SIMPLEX, 3, text_color, 2, cv2.LINE_AA)
     cv2.putText(image, "BOTTOM RIGHT", corners[3], cv2.FONT_HERSHEY_SIMPLEX, 3, text_color, 2, cv2.LINE_AA)
     return image
+
+def process_contours(index, hierarchy, cnts, min = 1_000_000, max = 4_000_000):
+    '''
+    finds big contours with area between :min and :max by tracersing the hierachy
+    '''
+
+    output = []
+    while index != -1:
+        contour = cnts[index]
+        area = cv2.contourArea(contour)
+        # print(f"{index} {area}")
+
+        # original 2_000_000
+        if min < area < max:
+            output.append((index,contour))
+
+        child_index = hierarchy[index][2]
+        if child_index != -1:
+            output += process_contours(child_index, hierarchy, cnts, min, max)  # Process children first
+        index = hierarchy[index][0]  # Move to the next contour
+
+    return output
+
+def find_best_chessboard_polygon(contours, image_width, image_height):
+    """
+    Finds the best polygon based on squareness and centeredness.
+
+    :param contours: List of contours, where each contour is an array of points.
+    :param image_width: Width of the image (used for determining center).
+    :param image_height: Height of the image (used for determining center).
+    :return: The best contour or None if no suitable polygon is found.
+    """
+    best_polygon = None
+    best_score = float('inf')  # Lower score is better
+
+    image_center = np.array([image_width / 2, image_height / 2])
+
+    for approx, n_squares in contours:
+        # Check for squareness
+        square_score = 0
+        for i in range(4):
+            # Calculate the lengths of all sides
+            side_a = np.linalg.norm(approx[i][0] - approx[(i + 1) % 4][0])
+            side_b = np.linalg.norm(approx[(i + 1) % 4][0] - approx[(i + 2) % 4][0])
+            angle_cosine = np.dot(
+                approx[i][0] - approx[(i - 1) % 4][0],
+                approx[(i + 1) % 4][0] - approx[i][0]
+            ) / (side_a * side_b)
+
+            square_score += abs(1 - abs(angle_cosine))  # Penalize non-right angles
+
+        # Check for centeredness
+        # polygon_center = np.mean(approx[:, 0], axis=0)
+        # center_score = np.linalg.norm(polygon_center - image_center)
+
+        # Check for number of squares
+        squares_number_score = (64 - n_squares if n_squares <= 64 else (n_squares - 64)*2)*100
+
+        # Combine scores
+        # total_score = square_score + center_score + squares_number_score
+        total_score = square_score + squares_number_score
+
+        if total_score < best_score:
+            best_score = total_score
+            best_polygon = approx
+
+    return best_polygon
