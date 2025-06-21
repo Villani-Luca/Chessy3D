@@ -28,10 +28,11 @@ PIECE_TO_INDEX = {
     chess.QUEEN: 4,
     chess.KING: 5
 }
+INDEX_TO_PIECE = {v: k for k, v in PIECE_TO_INDEX.items()}
 
 class NaivePositionEmbedder(PositionEmbedder):
     def __init__(self):
-        self.EMBEDDING_SIZE = 768
+        self.EMBEDDING_SIZE = 64*6*2 # squares * pieces * colors
 
     def embedding(self, board: chess.Board) -> np.ndarray:
         arr = self.create_empty_embedding()
@@ -45,7 +46,25 @@ class NaivePositionEmbedder(PositionEmbedder):
 
     @staticmethod
     def _compute_index(square: chess.Square, piece: chess.Piece):
-        return square * 6 + PIECE_TO_INDEX[piece.piece_type]
+        return square * 12 + PIECE_TO_INDEX[piece.piece_type] + (0 if piece.color == chess.WHITE else 6)
+
+    def unembedding(self, embedding: np.ndarray) -> chess.Board:
+        board = chess.Board()
+        for square in chess.SQUARES:
+            piece = self._compute_piece(square, embedding)
+            board.set_piece_at(square, piece)
+
+        return board
+
+    @staticmethod
+    def _compute_piece(square: chess.Square, embedding: np.ndarray) -> chess.Piece|None:
+        position = square * 12
+        window = embedding[position:position+12]
+        if window.max() == 0:
+            return None
+
+        index = window.argmax()
+        return chess.Piece(INDEX_TO_PIECE[index % 6], chess.WHITE if index < 6 else chess.BLACK)
 
     def embedding_move(self, board: chess.Board, move: chess.Move, array: np.ndarray) -> np.ndarray:
         if array.shape[0] != self.EMBEDDING_SIZE and array.dtype != np.uint8:
@@ -61,7 +80,7 @@ class NaivePositionEmbedder(PositionEmbedder):
 
         return array
 
-    def create_empty_embedding(self):
+    def create_empty_embedding(self, board = None):
         return np.zeros(self.EMBEDDING_SIZE, dtype=np.float32)
 
 
