@@ -23,7 +23,7 @@ PG_CONN = r"host=localhost user=postgres password=password dbname=chessy"
 
 SAN_MOVE_REGEX = r'(?:\d+\.)?([KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?|O-O(?:-O)?)[+#]?'
 STARTING_ID = 0
-N_RECORDS = 1_000_000
+N_RECORDS = 500_000
 # N_RECORDS = 1
 PRODUCERS_NUMBER = 8
 CONSUMERS_NUMBER = 5
@@ -77,15 +77,18 @@ def worker(
             output = WorkerOutput(game_id)
 
             board = chess.Board()
-            arr = embedder.embedding(board)
+            # arr = embedder.embedding(board)
             for san_move in re.findall(SAN_MOVE_REGEX, moves):
                 try:
                     move = board.push_san(san_move)
 
                     # find if position has been reached before
                     move_hash = chess.polyglot.zobrist_hash(board)
-                    arr = embedder.embedding_move(board, move, arr)
-                    output.add_move(move_hash, arr.copy())
+                    # arr = embedder.embedding_move(board, move, arr)
+                    # output.add_move(move_hash, arr.copy())
+
+                    arr = embedder.embedding(board)
+                    output.add_move(move_hash, arr)
                 except ValueError as e:
                     print(f'[WORKER {worker_id}] failed {game_id} {move}: {e}')
                     delete.append(game_id)

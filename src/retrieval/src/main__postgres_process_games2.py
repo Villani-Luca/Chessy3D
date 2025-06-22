@@ -31,15 +31,18 @@ DISABLE_SQL = False
 board = chess.Board()
 embedder = NaivePositionEmbedder()
 arr = embedder.embedding(board)
-for san_move in re.findall(SAN_MOVE_REGEX, r" 1.e4 d6 2.d4 Nf6 3.Nc3 Nbd7 4.Be3 e5 5.Nf3 Be7 6.Be2 O-O 7.O-O c6 8.h3 exd4 9.Qxd4 Nc5 10.Rad1 a5 11.e5 dxe5 12.Qxe5 Ncd7 13.Qh2 Bb4 14.Na4 Nd5 15.Bg5 Qe8 16.Bc4 b5 17.Bxd5 cxd5 18.Nc3 Bxc3 19.bxc3 Bb7 20.Rfe1 Qc8 21. Re7 Re8 22.Rde1 Rxe7 23.Rxe7 h6 24.Qf4 Qxc3 25.Qxf7+ Kh7 26.Rxd7 Bc6 27. Re7 hxg5 28.Nxg5+ Kh8 29.Qh5+ Kg8 30.Qh7+ Kf8 31.Rf7+ 1-0"):
+for san_move in re.findall(SAN_MOVE_REGEX, r"  1.e4 e5 2.Nf3 Nc6 3.Bb5 a6 4.Ba4 Nf6 5.O-O Be7 6.Re1 O-O 7.Bxc6 dxc6 8. Nxe5 Bc5 9.c3 Re8 10.d4 Bd6 11.f4 c5 12.h3 cxd4 13.cxd4 c5 14.Nc3 cxd4 15. Qxd4 Qe7 16.Nd3 Bb8 17.Be3 Rd8 18.Qc5 Qe8 19.Rad1 Ba7 20.Qe5 Bxe3+ 21.Rxe3 Be6 22.Ree1 Bc4 23.Qxe8+ Rxe8 24.Ne5 Be6 25.Nf3 Rac8 26.a3 Bb3 27.Rd6 Nh5 28.Rb6 Nxf4 29.Rxb3 b5 30.e5 Nd3 31.Re3 Red8 32.Ne4 Rc1+ 33.Kh2 Nc5 34. Nxc5 Rxc5 35.Rbc3 Rcd5 36.Rc7 h6 37.Ra7 Rd3 38.Rxd3 Rxd3 39.Rxa6 Rb3 40. Ra8+ Kh7 41.Rb8 Kg6 42.Nd4 Rxb2 43.Rxb5 Ra2 44.Ra5 h5 45.a4 Kh6 46.Nf3 g5 47.Ra6+ Kg7 48.Nxg5 Re2 49.Ra7 Rxe5 50.Nxf7 Re2 51.a5 Kf6 52.a6 Rb2 53.Nd6 Ra2 54.Nb5 Ke6 55.Ra8 Kd7 56.a7 Kc6 57.Rb8 Ra6 58.a8=Q+ Rxa8 59.Rxa8 Kxb5 60.Rh8 h4 61.Rh5+ Kc4 62.Rxh4+ Kd5 63.g4 Ke6 64.Kg3 Kf6 65.Rh5 Kg6 66.Rf5 Kg7 67.h4 Kg6 68.h5+ Kg7 69.Kh4 1-0"):
     move = board.push_san(san_move)
 
     # find if position has been reached before
     id = chess.polyglot.zobrist_hash(board)
     arr = embedder.embedding_move(board, move, arr)
+    unembed = embedder.unembedding(arr)
     print(id if id <= 9223372036854775807 else id - 18446744073709551616)
     print(f"{''.join(arr.astype(int).astype(str))}")
     print()
     print(board)
+    print(str(board) == str(unembed))
+    print(unembed)
     print()
     print()
