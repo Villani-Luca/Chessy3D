@@ -4,6 +4,7 @@ import sys
 import chess
 import chess.polyglot
 import cv2.typing
+import numpy as np
 import ultralytics
 from PySide6.QtCore import QThreadPool, Slot
 from PySide6.QtWidgets import (QApplication, QWidget, QGridLayout)
@@ -32,6 +33,21 @@ piece_mapping_yolo1 = {
     9:  (chess.PAWN,    chess.BLACK, (200, 200, 200)),  # black-pawn
     10: (chess.QUEEN,   chess.BLACK, (128, 0, 128)  ),  # black-queen
     11: (chess.ROOK,    chess.BLACK, (255, 0, 0)    ),  # black-rook
+}
+
+piece_mapping_yolo1_inverted = {
+    0:  (chess.BISHOP,  chess.BLACK, (0, 255, 0)    ),  # white-bishop
+    1:  (chess.KING,    chess.BLACK, (0, 0, 255)    ),  # white-king
+    2:  (chess.KNIGHT,  chess.BLACK, (0, 165, 255)   ),  # white-knight
+    3:  (chess.PAWN,    chess.BLACK, (200, 200, 200)   ),  # white-pawn
+    4:  (chess.QUEEN,   chess.BLACK, (128, 0, 128)    ),  # white-queen
+    5:  (chess.ROOK,    chess.BLACK, (255, 0, 0)    ),  # white-rook
+    6:  (chess.BISHOP,  chess.WHITE, (0, 100, 0)    ),  # black-bishop
+    7:  (chess.KING,    chess.WHITE, (0, 0, 139)    ),  # black-king
+    8:  (chess.KNIGHT,  chess.WHITE, (0, 85, 170)  ),  # black-knight
+    9:  (chess.PAWN,    chess.WHITE, (80, 80, 80)),  # black-pawn
+    10: (chess.QUEEN,   chess.WHITE, (64, 0, 64)  ),  # black-queen
+    11: (chess.ROOK,    chess.WHITE, (139, 0, 0)    ),  # black-rook
 }
 
 piece_mapping_yolo2 = {
@@ -96,10 +112,10 @@ class MainWindow(QWidget):
 
             self.chess_widget.draw_board(chess.Board(None))
             # rgb_image, corners_list, squares_data_original, img, best_canny, best_hough, polygons_image = chess_localization.auto_chessboard_localization(img,resized)
-            final_image, corners_list, squares_data_original, img, best_canny, best_hough, polygons_image = chess_localization.auto_chessboard_localization_alt(img,resized)
+            final_image, corners_list, squares_data_original, img, best_canny, best_hough, polygons_image, upsize_factor = chess_localization.auto_chessboard_localization_alt(img,resized)
 
             # make prediction
-            results = yolo(img)  # path to test image
+            results = yolo(img)  # resized image
 
             coord_dict = {}
             for cell, coordinate in enumerate(squares_data_original, start=1):
@@ -131,9 +147,25 @@ class MainWindow(QWidget):
                     color = piece_mapping.get(class_id, (255, 255, 255))[2]  # Default to white if class not in mapping
                     cv2.rectangle(final_image, (x1, y1), (x2, y2), color, 4)
 
+            ######
+            mesh_img = np.zeros_like(final_image)
+            for result in results:  # results is model's prediction
+                for idx, box in enumerate(result.boxes.xyxy):  # box with xyxy format, (N, 4)
+                    x1, y1, x2, y2 = int(box[0]), int(box[1]), int(box[2]), int(box[3])  # take coordinates
+                    x_mid = int((x1 + x2) / 2)
+                    y_mid = y2 - 30
+                    class_id = int(result.boxes.cls[idx])
+                    color = piece_mapping.get(class_id, (255, 255, 255))[2]
+                    cv2.circle(mesh_img, (x_mid, y_mid), 5, color, -1)
+
+            for cell, coordinates in coord_dict.items():
+                cv2.polylines(mesh_img, [np.array(coordinates, dtype=np.int32).reshape(-1, 1, 2)], True, (255, 255, 255), 2)
+            #######
+
             self.file_uploader.set_opencv_image(best_canny, FileUploader.Tabs.CANNY)
             self.file_uploader.set_opencv_image(best_hough, FileUploader.Tabs.HOUGH)
             self.file_uploader.set_opencv_image(polygons_image, FileUploader.Tabs.SQUARES)
+            self.file_uploader.set_opencv_image(mesh_img, FileUploader.Tabs.MESH)
             self.file_uploader.set_opencv_image(final_image, FileUploader.Tabs.FINAL)
             new_board = chess.Board(None)
             for (cell, detected_class) in game_list:
@@ -141,6 +173,7 @@ class MainWindow(QWidget):
                 new_board.set_piece_at(cell - 1, piece)
 
             self.chess_widget.draw_board(new_board)
+            self.file_uploader.open_tab(FileUploader.Tabs.FINAL)
 
         def __on_row_dblclick(row_data):
             print(row_data)
@@ -186,8 +219,10 @@ if __name__ == "__main__":
         #"milvus_collection": NAIVE_COLLECTION_NAME,
         # "object_detection_yolo": r"E:\projects\uni\Chessy3D\src\object_detection_yolo\chess-model-yolov8m.pt",
         # "piece_mapping": piece_mapping_yolo1,
-        "object_detection_yolo": r"E:\projects\uni\Chessy3D\src\object_detection_yolo\best_final.pt",
-        "piece_mapping": piece_mapping_yolo2,
+        "object_detection_yolo": r"E:\projects\uni\Chessy3D\src\object_detection_yolo\20250623_finetune_50.pt",
+        "piece_mapping": piece_mapping_yolo1_inverted,
+        # "object_detection_yolo": r"E:\projects\uni\Chessy3D\src\object_detection_yolo\best_final.pt",
+        # "piece_mapping": piece_mapping_yolo2,
         "debug": False,
     }
 

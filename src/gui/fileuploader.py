@@ -12,6 +12,7 @@ class FileUploader(QWidget):
         CANNY = "Canny"
         HOUGH = "Hough"
         SQUARES = "Squares"
+        MESH = "Mesh"
         FINAL = "Final"
 
     def __init__(self, callback: Callable[['FileUploader', str], None] | None = None):
@@ -105,3 +106,11 @@ class FileUploader(QWidget):
             elif file_path.lower().endswith(('mp4', 'avi', 'mov', 'mkv')):
                 for name in self.tab_names:
                     self.image_labels[name].setText("Video support is pending!")
+
+    def open_tab(self, tab: Tabs):
+        index = self.tab_names.index(tab)
+        if index < 0:
+            raise Exception(f"Invalid tab name: {tab}. Must be one of {self.tab_names}")
+
+        if index != self.tabs.currentIndex():
+            self.tabs.setCurrentIndex(index)

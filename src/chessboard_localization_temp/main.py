@@ -63,7 +63,7 @@ def auto_chessboard_localization_alt(image, resized_image):
     original_size = image.shape[0]
     resized_size = resized_image.shape[0]
     parameters_original_size = 1000
-    upsize_factor = resized_size / original_size
+    upsize_factor = (resized_image.shape[0] / image.shape[0], resized_image.shape[1] / image.shape[1])
     scale_factor = resized_size / parameters_original_size 
 
     blurred_image = cv2.bilateralFilter(gray_image,9,75,75)
@@ -169,6 +169,6 @@ def auto_chessboard_localization_alt(image, resized_image):
         draw_chessboard_squares(output_with_corners, squares_data, corners_list.astype(int))
         _, _, hough_image, polygons_image = final_candidates[i]
 
-        return output_with_corners, corners_list, squares_data, resized_image, canny_image, hough_image, polygons_image
+        return output_with_corners, corners_list, squares_data, resized_image, canny_image, hough_image, polygons_image, upsize_factor
     else:
-        return resized_image, [], [], resized_image, canny_image, resized_image, resized_image
+        return resized_image, [], [], resized_image, canny_image, resized_image, resized_image, upsize_factor
