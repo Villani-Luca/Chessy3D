@@ -77,7 +77,7 @@ class MainWindow(QWidget):
         # Create widgets
         print("Setting up widgets...")
 
-        self.chess_widget = ChessBoardWidget(ChessBoard(chess.Board(None), debug=debug))
+        self.chess_widget = ChessBoardWidget(chess.Board(None), debug=debug)
 
         def __on_retrieval_result(r: list[Row]):
             self.retrieval_result = r
@@ -120,9 +120,6 @@ class MainWindow(QWidget):
                     y_mid = y2 - 30
 
                     for cell_value, coordinates in coord_dict.items():
-                        x_values = [point[0] for point in coordinates]
-                        y_values = [point[1] for point in coordinates]
-
                         if cv2.pointPolygonTest(np.array(coordinates).reshape(-1, 1, 2), (x_mid, y_mid), False) >= 0:
                             # add cell values and piece cell_value(class value
                             game_list.append([cell_value, class_id])

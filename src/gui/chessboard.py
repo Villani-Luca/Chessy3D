@@ -77,38 +77,11 @@ class ChessBoard(QGraphicsView):
         qpixmap = QGraphicsPixmapItem(pixmap)
         offset = (self.cell_size - pixmap.width()) / 2
         qpixmap.setPos(col * self.cell_size + offset, row * self.cell_size + offset)
+        qpixmap.setZValue(2)
         scene.addItem(qpixmap)
 
-    def rotate_board_left(self):
-        new_board = chess.Board(None)
-        for square in chess.SQUARES:
-            piece = self.board.piece_at(square)
-            if piece:
-                row, col = divmod(square, 8)
-                new_row, new_col = 7 - col, row
-                new_square = new_row * 8 + new_col
-                new_board.set_piece_at(new_square, piece)
-        self.draw_board(new_board)
-
-    def rotate_board_right(self):
-        new_board = chess.Board(None)
-        for square in chess.SQUARES:
-            piece = self.board.piece_at(square)
-            if piece:
-                row, col = divmod(square, 8)
-                new_row, new_col = col, 7 - row
-                new_square = new_row * 8 + new_col
-                new_board.set_piece_at(new_square, piece)
-        self.draw_board(new_board)
-
-    def retrieve_embedding(self, embedder: PositionEmbedder):
-        return embedder.embedding(self.board)
-
-    def get_fen(self):
-        return self.board.fen()
-
 class ChessBoardWidget(QWidget):
-    def __init__(self, board: ChessBoard):
+    def __init__(self, board: chess.Board, debug=False):
         super().__init__()
 
         self.board = board
@@ -118,17 +91,16 @@ class ChessBoardWidget(QWidget):
 
         self.info_label = QLabel()
         self.info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        #self.__reset_relative_board()
         layout.addWidget(self.info_label)
 
-        self.chess_view = board
+        self.chess_view = ChessBoard(board, debug=debug)
         layout.addWidget(self.chess_view)
 
         button_layout = QHBoxLayout()
         self.rotate_left_btn = QPushButton("⟲")
         self.rotate_right_btn = QPushButton("⟳")
-        self.rotate_left_btn.clicked.connect(self.chess_view.rotate_board_left)
-        self.rotate_right_btn.clicked.connect(self.chess_view.rotate_board_right)
+        self.rotate_left_btn.clicked.connect(self.rotate_board_left)
+        self.rotate_right_btn.clicked.connect(self.rotate_board_right)
 
         self.fen_textbox = QLineEdit()
         self.fen_textbox.setReadOnly(True)
@@ -140,7 +112,7 @@ class ChessBoardWidget(QWidget):
 
         self.reset_relative_board_btn = QPushButton()
         self.reset_relative_board_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowBack))
-        self.reset_relative_board_btn.clicked.connect(self.__reset_relative_board)
+        self.reset_relative_board_btn.clicked.connect(self.reset_relative_board)
         self.reset_relative_board_btn.setVisible(False)
 
         button_layout.addWidget(self.rotate_left_btn)
@@ -150,26 +122,55 @@ class ChessBoardWidget(QWidget):
         button_layout.addWidget(self.reset_relative_board_btn)
         layout.addLayout(button_layout)
 
-    def draw_board(self, board = None):
-        self.board = board
+    def __rotate_board(self, right=False):
+        new_board = chess.Board(None)
+        for square in chess.SQUARES:
+            piece = self.board.piece_at(square)
+            if piece:
+                row, col = divmod(square, 8)
+                new_row, new_col = (col, 7 - row) if right else (7 - col, row)
+                new_square = new_row * 8 + new_col
+                new_board.set_piece_at(new_square, piece)
+        return new_board
+
+    def rotate_board_left(self):
+        self.board = self.__rotate_board(right=False)
         self.chess_view.draw_board(self.board)
         self.update_fen_textbox()
 
+    def rotate_board_right(self):
+        self.board = self.__rotate_board(right=True)
+        self.chess_view.draw_board(self.board)
+        self.update_fen_textbox()
+
+    def draw_board(self, board = None):
+        self.board = board
+        self.update_fen_textbox()
+        self.reset_relative_board()
+        self.chess_view.draw_board(self.board)
+
     def retrieve_embedding(self, embedder: PositionEmbedder):
-        return self.chess_view.retrieve_embedding(embedder)
+        return embedder.embedding(self.board)
 
     def update_fen_textbox(self):
-        self.fen_textbox.setText(self.chess_view.get_fen())
+        self.fen_textbox.setText(self.board.fen())
 
     def copy_fen_to_clipboard(self):
         clipboard = QApplication.clipboard()
         clipboard.setText(self.fen_textbox.text())
 
-    def __reset_relative_board(self):
+    def reset_relative_board(self):
+        if self.saved_board is None:
+            return
+
         self.board = self.saved_board
         self.saved_board = None
         self.reset_relative_board_btn.setVisible(False)
         self.info_label.setText(f"")
+
+        self.update_fen_textbox()
+        self.rotate_left_btn.setVisible(True)
+        self.rotate_right_btn.setVisible(True)
         self.chess_view.draw_board(self.board)
 
     def show_relative_board(self, board: chess.Board, event: str, white_player: str, black_player: str):
@@ -183,4 +184,11 @@ class ChessBoardWidget(QWidget):
             <h3>{event}</h3>
             <p>{white_player} vs {black_player}</p>
         """)
+
+        differences = [x for x in chess.SQUARES if self.saved_board.piece_at(x) != self.board.piece_at(x)]
+        print("Differences at squares", differences)
         self.chess_view.draw_board(self.board)
+
+        self.update_fen_textbox()
+        self.rotate_left_btn.setVisible(False)
+        self.rotate_right_btn.setVisible(False)
