@@ -1,10 +1,13 @@
+import re
 import sys
 
 import chess
+import chess.polyglot
 import cv2.typing
 import ultralytics
 from PySide6.QtCore import QThreadPool, Slot
 from PySide6.QtWidgets import (QApplication, QWidget, QGridLayout)
+from psycopg.rows import Row
 
 from src.gui.chessboard import ChessBoard, ChessBoardWidget
 from src.gui.datagrid import DataGrid
@@ -46,6 +49,8 @@ piece_mapping_yolo2 = {
     11: (chess.KING,    chess.WHITE, (0, 0, 255)    ),  # white-king
 }
 
+SAN_MOVE_REGEX = r'(?:\d+\.)?([KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](?:=[QRBN])?|O-O(?:-O)?)[+#]?'
+
 class MainWindow(QWidget):
     def __init__(self, args: dict):
         super().__init__()
@@ -73,11 +78,15 @@ class MainWindow(QWidget):
 
         self.chess_widget = ChessBoardWidget(ChessBoard(chess.Board(None), debug=debug))
 
+        def __on_retrieval_result(r: list[Row]):
+            self.retrieval_result = r
+            self.data_grid.set_data([x[:-2] for x in r])
+
         def refresh_datagrid():
             embedding = self.chess_widget.retrieve_embedding(position_embedder)
             self.retrieval_job = RetrievalJob(embedding, games_repo)
             self.retrieval_job.signals.start.connect(lambda: self.data_grid.set_enable_refreshbutton(False))
-            self.retrieval_job.signals.result.connect(lambda r: self.data_grid.set_data(r))
+            self.retrieval_job.signals.result.connect(__on_retrieval_result)
             self.retrieval_job.signals.finished.connect(lambda: self.data_grid.set_enable_refreshbutton(True))
 
             self.threadpool.start(self.retrieval_job)
@@ -133,8 +142,24 @@ class MainWindow(QWidget):
 
             self.chess_widget.draw_board(new_board)
 
+        def __on_row_dblclick(row_data):
+            print(row_data)
+            if self.retrieval_result is None:
+                return
+
+            full_row = next((x for x in self.retrieval_result if x.value == row_data[0]), None)
+            position_hash, moves = full_row[-2], full_row[-1]
+            similar_board = chess.Board()
+            for san_move in re.findall(SAN_MOVE_REGEX, moves):
+                similar_board.push_san(san_move)
+                if position_hash == chess.polyglot.zobrist_hash(similar_board):
+                    break
+
+            self.chess_widget.show_relative_board(similar_board, full_row[0], full_row[3], full_row[5])
+
+
         self.file_uploader = FileUploader(callback=on_file_upload_callback)
-        self.data_grid = DataGrid(on_refresh_button=refresh_datagrid)
+        self.data_grid = DataGrid(on_refresh_button=refresh_datagrid, on_row_double_click=__on_row_dblclick)
 
         # Main layout with QGridLayout
         main_layout =  QGridLayout()

@@ -3,10 +3,14 @@ from PySide6.QtWidgets import QTableWidget, QLabel, QVBoxLayout, QTableWidgetIte
 
 
 class DataGrid(QTableWidget):
-    def __init__(self, on_refresh_button, headers=["Id", "Event", "Date", "White", "White title", "Black", "Black title"]):
+    def __init__(self, on_refresh_button, on_row_double_click, headers=None):
+        if headers is None:
+            headers = ["Id", "Event", "Date", "White", "White title", "Black", "Black title", "Distance"]
+
         super().__init__()  # Example: 5 rows, 3 columns
 
         # self.setColumnCount(3)
+        self.on_row_double_click = on_row_double_click
         self.headers = headers
         self.setHorizontalHeaderLabels(headers)
 
@@ -32,6 +36,9 @@ class DataGrid(QTableWidget):
         self.layout.addLayout(button_layout)
         self.layout.addWidget(self.empty_label)
         self.setLayout(self.layout)
+
+        # Connect the double-click signal to callback
+        self.cellDoubleClicked.connect(self.handle_row_double_click)
 
         # Fill data
         self.update_empty_label()
@@ -61,3 +68,8 @@ class DataGrid(QTableWidget):
                 self.setItem(row, col, QTableWidgetItem(str(data[row][col])))
 
         self.update_empty_label()
+
+    def handle_row_double_click(self, row, column):
+        # Get all data from the clicked row and pass it to the callback
+        row_data = [self.item(row, col).text() if self.item(row, col) else "" for col in range(self.columnCount())]
+        self.on_row_double_click(row_data)

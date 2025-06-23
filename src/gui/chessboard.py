@@ -4,7 +4,7 @@ import chess
 from PySide6.QtCore import Qt, QRectF
 from PySide6.QtGui import QPixmap, QColor, QBrush
 from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsRectItem, QGraphicsPixmapItem, QWidget, \
-    QVBoxLayout, QHBoxLayout, QPushButton, QGraphicsSimpleTextItem, QLineEdit, QApplication, QStyle
+    QVBoxLayout, QHBoxLayout, QPushButton, QGraphicsSimpleTextItem, QLineEdit, QApplication, QStyle, QLabel
 
 from src.retrieval.src.position_embeddings import PositionEmbedder
 
@@ -111,7 +111,16 @@ class ChessBoardWidget(QWidget):
     def __init__(self, board: ChessBoard):
         super().__init__()
 
+        self.board = board
+        self.relative_board = board
+
         layout = QVBoxLayout(self)
+
+        self.info_label = QLabel()
+        self.info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        #self.__reset_relative_board()
+        layout.addWidget(self.info_label)
+
         self.chess_view = board
         layout.addWidget(self.chess_view)
 
@@ -129,14 +138,20 @@ class ChessBoardWidget(QWidget):
         self.copy_fen_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogStart))
         self.copy_fen_btn.clicked.connect(self.copy_fen_to_clipboard)
 
+        self.reset_relative_board_btn = QPushButton()
+        self.reset_relative_board_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowBack))
+        self.reset_relative_board_btn.clicked.connect(self.__reset_relative_board)
+
         button_layout.addWidget(self.rotate_left_btn)
         button_layout.addWidget(self.rotate_right_btn)
         button_layout.addWidget(self.fen_textbox)
         button_layout.addWidget(self.copy_fen_btn)
+        button_layout.addWidget(self.reset_relative_board_btn)
         layout.addLayout(button_layout)
 
     def draw_board(self, board = None):
-        self.chess_view.draw_board(board)
+        self.board = board
+        self.chess_view.draw_board(self.board)
         self.update_fen_textbox()
 
     def retrieve_embedding(self, embedder: PositionEmbedder):
@@ -148,3 +163,20 @@ class ChessBoardWidget(QWidget):
     def copy_fen_to_clipboard(self):
         clipboard = QApplication.clipboard()
         clipboard.setText(self.fen_textbox.text())
+
+    def __reset_relative_board(self):
+        self.show_relative_board(None, "Unknown", "Unknown", "Unknown")
+
+    def show_relative_board(self, board: chess.Board|None, event: str, white_player: str, black_player: str):
+        # Update the informational label
+        visible = board is not None
+
+        self.relative_board = board
+        self.reset_relative_board_btn.setVisible(visible)
+        if visible:
+            self.info_label.setText(f"""
+                <h3>{event}</h3>
+                <p>{white_player} vs {black_player}</p>
+            """)
+        else:
+            self.info_label.setText(f"")

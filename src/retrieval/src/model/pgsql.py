@@ -72,22 +72,26 @@ class PgGamesRepository:
             prepare=True
         ).fetchall()
 
+    def get_best_positions_from_naive(self, embedding: np.array):
+        return self.conn.cursor.execute(
+            """
+            SELECT v.embeddingid, v.embedding <~> $1 AS distance
+            FROM naivevectors v
+            ORDER BY distance
+            LIMIT 5 
+            """,
+            (Bit(embedding).to_text(),)
+        ).fetchall()
+
     def get_best_games_from_naiveposition(self, position: np.array):
         return self.conn.cursor.execute(
             """
-            SELECT g.id, g.event, g.date, g.white, g.whitetitle, g.black, g.blacktitle
-            FROM games g
-            WHERE g.id in (
-                SELECT m.gameid
-                FROM moves m
-                where m.embeddingid in (	
-                    select v.embeddingid
-                    from naivevectors v
-                    ORDER BY v.embedding <~> %s
-                    LIMIT 5
-                ) 
-                LIMIT 10
-            )
+            SELECT g.id, g.event, g.date, g.white, g.whitetitle, g.black, g.blacktitle, v.embedding <~> $1 as distance, v.embeddingid, g.moves
+            from games g
+            join moves m on g.id = m.gameid
+            join naivevectors v on m.embeddingid = v.embeddingid
+            order by distance
+            limit 5
             """,
             (Bit(position).to_text(),)
         ).fetchall()
