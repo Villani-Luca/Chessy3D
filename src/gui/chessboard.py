@@ -30,18 +30,22 @@ class ChessBoard(QGraphicsView):
         super().resizeEvent(event)
         self.draw_board()
 
-    def draw_board(self, board = None):
+    def draw_board(self, board = None, differences = None):
+        differences = differences if differences is not None else []
+
         if board is not None:
             self.board = board
 
         scene = self.scene()
         scene.clear()
+        # QApplication.processEvents()
 
         size = min(self.width(), self.height())
         self.cell_size = size / self.board_size
 
         white = QColor("white")
         gray = QColor("gray")
+        highlight_brush = QBrush(QColor(255, 255, 0, 128))
         for row in range(self.board_size):
             for col in range(self.board_size):
                 rect = QRectF(col * self.cell_size, row * self.cell_size, self.cell_size, self.cell_size)
@@ -51,12 +55,18 @@ class ChessBoard(QGraphicsView):
                 scene.addItem(square)
 
                 position = (7 - row) * 8 + col
+                if position in differences:
+                    highlight = QGraphicsRectItem(rect)
+                    highlight.setBrush(highlight_brush)
+                    highlight.setPen(Qt.PenStyle.NoPen)  # Remove the border for the highlight
+                    highlight.setZValue(1)  # Ensure it overlays the base square
+                    scene.addItem(highlight)
 
                 if self.debug:
                     label = f"{position + 1}"
                     text_item = QGraphicsSimpleTextItem(label)
                     text_item.setBrush(QBrush("black"))
-                    text_item.setZValue(1)  # make sure it's on top of the board
+                    text_item.setZValue(2)  # make sure it's on top of the board
                     # Position below the last row
                     text_item.setPos(col * self.cell_size + 2, row * self.cell_size + 2)
                     scene.addItem(text_item)
@@ -64,6 +74,9 @@ class ChessBoard(QGraphicsView):
                 piece = self.board.piece_at(position)
                 if piece is not None:
                     self.draw_piece(row, col, piece)
+
+
+
 
     def draw_piece(self, row: int, col: int, piece: chess.Piece, confidence: float | None = None):
         scene = self.scene()
@@ -186,8 +199,14 @@ class ChessBoardWidget(QWidget):
         """)
 
         differences = [x for x in chess.SQUARES if self.saved_board.piece_at(x) != self.board.piece_at(x)]
+
+        # sinceramente questa é magia nera, non ho capito veramente come pyside6 funziona
+        # ma a quanto pare alcune cose sono aggiornate in momenti diversi rispetto a quello che dice il codice
+        # aspettare gli eventi in questo punto permette alla griglia ( con highlights ) di essere renderizzata correttamente
+        QApplication.processEvents()
+
         print("Differences at squares", differences)
-        self.chess_view.draw_board(self.board)
+        self.chess_view.draw_board(self.board, differences)
 
         self.update_fen_textbox()
         self.rotate_left_btn.setVisible(False)
