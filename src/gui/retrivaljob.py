@@ -1,7 +1,7 @@
 import numpy as np
 
 from src.gui.worker import Worker, WorkerSignals
-from src.retrieval.src.model.pgsql import PgGamesRepository
+from src.retrieval.src.pgsql import PgGamesRepository
 
 
 class RetrievalJobSignals(WorkerSignals):

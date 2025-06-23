@@ -1,7 +1,7 @@
 from milvus import MilvusRepository
 import chess
 from position_embeddings import NaivePositionEmbedder
-from model.pgsql import Connection, PgGamesRepository
+from src.retrieval.src.pgsql import Connection, PgGamesRepository
 
 PG_CONN = "host=localhost user=postgres password=password dbname=chessy"
 

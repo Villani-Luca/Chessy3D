@@ -2,10 +2,9 @@ import pathlib
 import time
 
 import pandas as pd
-import numpy as np
 from pgvector.psycopg import Bit
 
-from src.retrieval.src.model.pgsql import Connection
+from src.retrieval.src.pgsql import Connection
 
 parquet_folder = pathlib.Path(r"D:\Projects\Uni\Chessy3D\data\retrieval\parqueet_out")
 

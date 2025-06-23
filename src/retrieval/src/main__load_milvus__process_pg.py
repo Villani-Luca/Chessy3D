@@ -11,8 +11,8 @@ import chess.polyglot
 import numpy as np
 from numpy import ndarray
 
-from src.retrieval.src.milvus import MilvusBulkWriter, MilvusSetup
-from src.retrieval.src.model.pgsql import Connection, PgGamesRepository, PgMovesRepository
+from src.retrieval.src.milvus import MilvusBulkWriter
+from src.retrieval.src.pgsql import Connection, PgGamesRepository, PgMovesRepository
 from src.retrieval.src.position_embeddings import PositionEmbedder, NaivePositionEmbedder
 
 ROOT = pathlib.Path.cwd().parent.parent.parent

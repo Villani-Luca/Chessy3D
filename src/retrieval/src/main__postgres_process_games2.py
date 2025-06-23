@@ -1,21 +1,11 @@
-import math
-import multiprocessing
 import pathlib
-import queue
 import re
-import time
-from time import sleep
 
-import chess.pgn
 import chess.polyglot
-import numpy as np
-from numpy import ndarray
-from pgvector import Bit
 import sys
 sys.path.extend(r"E:\projects\uni\Chessy3D\src")
 
-from src.retrieval.src.model.pgsql import Connection, PgGamesRepository, PgMovesRepository
-from src.retrieval.src.position_embeddings import PositionEmbedder, NaivePositionEmbedder
+from src.retrieval.src.position_embeddings import NaivePositionEmbedder
 
 
 ROOT = pathlib.Path.cwd().parent.parent.parent

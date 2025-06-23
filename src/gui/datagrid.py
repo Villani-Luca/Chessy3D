@@ -1,5 +1,6 @@
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QTableWidget, QLabel, QVBoxLayout, QTableWidgetItem, QHBoxLayout, QPushButton, QWidget
+from PySide6.QtWidgets import QTableWidget, QLabel, QVBoxLayout, QTableWidgetItem, QHBoxLayout, QPushButton, QWidget, \
+    QAbstractItemView
 
 
 class DataGrid(QTableWidget):
@@ -39,6 +40,7 @@ class DataGrid(QTableWidget):
 
         # Connect the double-click signal to callback
         self.cellDoubleClicked.connect(self.handle_row_double_click)
+        self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
 
         # Fill data
         self.update_empty_label()

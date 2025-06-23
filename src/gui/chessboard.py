@@ -68,7 +68,7 @@ class ChessBoard(QGraphicsView):
     def draw_piece(self, row: int, col: int, piece: chess.Piece, confidence: float | None = None):
         scene = self.scene()
 
-        piece_id = piece.piece_type + (6 if piece.color else 0)
+        piece_id = piece.piece_type + (0 if piece.color else 6)
         if piece_id not in self.loaded_pixmap:
             piece_image = pathlib.Path.cwd() / rf"assets/pieces/{piece_id}.png"
             self.loaded_pixmap[piece_id] = QPixmap(piece_image.as_posix())
@@ -112,7 +112,7 @@ class ChessBoardWidget(QWidget):
         super().__init__()
 
         self.board = board
-        self.relative_board = board
+        self.saved_board = None
 
         layout = QVBoxLayout(self)
 
@@ -141,6 +141,7 @@ class ChessBoardWidget(QWidget):
         self.reset_relative_board_btn = QPushButton()
         self.reset_relative_board_btn.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowBack))
         self.reset_relative_board_btn.clicked.connect(self.__reset_relative_board)
+        self.reset_relative_board_btn.setVisible(False)
 
         button_layout.addWidget(self.rotate_left_btn)
         button_layout.addWidget(self.rotate_right_btn)
@@ -165,18 +166,21 @@ class ChessBoardWidget(QWidget):
         clipboard.setText(self.fen_textbox.text())
 
     def __reset_relative_board(self):
-        self.show_relative_board(None, "Unknown", "Unknown", "Unknown")
+        self.board = self.saved_board
+        self.saved_board = None
+        self.reset_relative_board_btn.setVisible(False)
+        self.info_label.setText(f"")
+        self.chess_view.draw_board(self.board)
 
-    def show_relative_board(self, board: chess.Board|None, event: str, white_player: str, black_player: str):
+    def show_relative_board(self, board: chess.Board, event: str, white_player: str, black_player: str):
         # Update the informational label
-        visible = board is not None
+        if self.saved_board is None:
+            self.saved_board = self.board
 
-        self.relative_board = board
-        self.reset_relative_board_btn.setVisible(visible)
-        if visible:
-            self.info_label.setText(f"""
-                <h3>{event}</h3>
-                <p>{white_player} vs {black_player}</p>
-            """)
-        else:
-            self.info_label.setText(f"")
+        self.board = board
+        self.reset_relative_board_btn.setVisible(True)
+        self.info_label.setText(f"""
+            <h3>{event}</h3>
+            <p>{white_player} vs {black_player}</p>
+        """)
+        self.chess_view.draw_board(self.board)

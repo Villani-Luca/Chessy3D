@@ -6,48 +6,33 @@ import chess.polyglot
 import cv2.typing
 import numpy as np
 import ultralytics
-from PySide6.QtCore import QThreadPool, Slot
+from PySide6.QtCore import QThreadPool
 from PySide6.QtWidgets import (QApplication, QWidget, QGridLayout)
 from psycopg.rows import Row
 
 from src.gui.chessboard import ChessBoard, ChessBoardWidget
 from src.gui.datagrid import DataGrid
 from src.gui.fileuploader import FileUploader
-from src.gui.recognitionjob import RecognitionJob
 from src.gui.retrivaljob import RetrievalJob
-from src.retrieval.src.model.pgsql import Connection, PgGamesRepository
+from src.retrieval.src.commons import zobrist_to_s64
+from src.retrieval.src.pgsql import Connection, PgGamesRepository
 import src.chessboard_localization_temp.main as chess_localization
 from src.retrieval.src.position_embeddings import NaivePositionEmbedder
 
 # yolo chess-model-yolov8m
 piece_mapping_yolo1 = {
-    0:  (chess.BISHOP,  chess.WHITE, (0, 100, 0)    ),  # white-bishop
-    1:  (chess.KING,    chess.WHITE, (0, 0, 139)    ),  # white-king
-    2:  (chess.KNIGHT,  chess.WHITE, (0, 85, 170)   ),  # white-knight
-    3:  (chess.PAWN,    chess.WHITE, (80, 80, 80)   ),  # white-pawn
-    4:  (chess.QUEEN,   chess.WHITE, (64, 0, 64)    ),  # white-queen
-    5:  (chess.ROOK,    chess.WHITE, (139, 0, 0)    ),  # white-rook
-    6:  (chess.BISHOP,  chess.BLACK, (0, 255, 0)    ),  # black-bishop
-    7:  (chess.KING,    chess.BLACK, (0, 0, 255)    ),  # black-king
-    8:  (chess.KNIGHT,  chess.BLACK, (0, 165, 255)  ),  # black-knight
-    9:  (chess.PAWN,    chess.BLACK, (200, 200, 200)),  # black-pawn
-    10: (chess.QUEEN,   chess.BLACK, (128, 0, 128)  ),  # black-queen
-    11: (chess.ROOK,    chess.BLACK, (255, 0, 0)    ),  # black-rook
-}
-
-piece_mapping_yolo1_inverted = {
-    0:  (chess.BISHOP,  chess.BLACK, (0, 255, 0)    ),  # white-bishop
-    1:  (chess.KING,    chess.BLACK, (0, 0, 255)    ),  # white-king
-    2:  (chess.KNIGHT,  chess.BLACK, (0, 165, 255)   ),  # white-knight
-    3:  (chess.PAWN,    chess.BLACK, (200, 200, 200)   ),  # white-pawn
-    4:  (chess.QUEEN,   chess.BLACK, (128, 0, 128)    ),  # white-queen
-    5:  (chess.ROOK,    chess.BLACK, (255, 0, 0)    ),  # white-rook
-    6:  (chess.BISHOP,  chess.WHITE, (0, 100, 0)    ),  # black-bishop
-    7:  (chess.KING,    chess.WHITE, (0, 0, 139)    ),  # black-king
-    8:  (chess.KNIGHT,  chess.WHITE, (0, 85, 170)  ),  # black-knight
-    9:  (chess.PAWN,    chess.WHITE, (80, 80, 80)),  # black-pawn
-    10: (chess.QUEEN,   chess.WHITE, (64, 0, 64)  ),  # black-queen
-    11: (chess.ROOK,    chess.WHITE, (139, 0, 0)    ),  # black-rook
+    0:  (chess.BISHOP,  chess.BLACK, (0, 100, 0)    ),  # white-bishop
+    1:  (chess.KING,    chess.BLACK, (0, 0, 139)    ),  # white-king
+    2:  (chess.KNIGHT,  chess.BLACK, (0, 85, 170)   ),  # white-knight
+    3:  (chess.PAWN,    chess.BLACK, (80, 80, 80)   ),  # white-pawn
+    4:  (chess.QUEEN,   chess.BLACK, (64, 0, 64)    ),  # white-queen
+    5:  (chess.ROOK,    chess.BLACK, (139, 0, 0)    ),  # white-rook
+    6:  (chess.BISHOP,  chess.WHITE, (0, 255, 0)    ),  # black-bishop
+    7:  (chess.KING,    chess.WHITE, (0, 0, 255)    ),  # black-king
+    8:  (chess.KNIGHT,  chess.WHITE, (0, 165, 255)  ),  # black-knight
+    9:  (chess.PAWN,    chess.WHITE, (200, 200, 200)),  # black-pawn
+    10: (chess.QUEEN,   chess.WHITE, (128, 0, 128)  ),  # black-queen
+    11: (chess.ROOK,    chess.WHITE, (255, 0, 0)    ),  # black-rook
 }
 
 piece_mapping_yolo2 = {
@@ -138,7 +123,7 @@ class MainWindow(QWidget):
                         x_values = [point[0] for point in coordinates]
                         y_values = [point[1] for point in coordinates]
 
-                        if (min(x_values) <= x_mid <= max(x_values)) and (min(y_values) <= y_mid <= max(y_values)):
+                        if cv2.pointPolygonTest(np.array(coordinates).reshape(-1, 1, 2), (x_mid, y_mid), False) >= 0:
                             # add cell values and piece cell_value(class value
                             game_list.append([cell_value, class_id])
                             break
@@ -180,12 +165,15 @@ class MainWindow(QWidget):
             if self.retrieval_result is None:
                 return
 
-            full_row = next((x for x in self.retrieval_result if x.value == row_data[0]), None)
+            full_row = next((x for x in self.retrieval_result if x[0] == int(row_data[0])), None)
+            if full_row is None:
+                return
+
             position_hash, moves = full_row[-2], full_row[-1]
             similar_board = chess.Board()
             for san_move in re.findall(SAN_MOVE_REGEX, moves):
                 similar_board.push_san(san_move)
-                if position_hash == chess.polyglot.zobrist_hash(similar_board):
+                if position_hash == zobrist_to_s64(chess.polyglot.zobrist_hash(similar_board)):
                     break
 
             self.chess_widget.show_relative_board(similar_board, full_row[0], full_row[3], full_row[5])
@@ -217,10 +205,9 @@ if __name__ == "__main__":
         'pgconn': r"host=localhost user=postgres password=password dbname=chessy",
         #"milvus_url": r"http://localhost:19530",
         #"milvus_collection": NAIVE_COLLECTION_NAME,
-        # "object_detection_yolo": r"E:\projects\uni\Chessy3D\src\object_detection_yolo\chess-model-yolov8m.pt",
-        # "piece_mapping": piece_mapping_yolo1,
-        "object_detection_yolo": r"E:\projects\uni\Chessy3D\src\object_detection_yolo\20250623_finetune_50.pt",
-        "piece_mapping": piece_mapping_yolo1_inverted,
+        "object_detection_yolo": r"E:\projects\uni\Chessy3D\src\object_detection_yolo\chess-model-yolov8m.pt",
+        # "object_detection_yolo": r"E:\projects\uni\Chessy3D\src\object_detection_yolo\20250623_finetune_50.pt",
+        "piece_mapping": piece_mapping_yolo1,
         # "object_detection_yolo": r"E:\projects\uni\Chessy3D\src\object_detection_yolo\best_final.pt",
         # "piece_mapping": piece_mapping_yolo2,
         "debug": False,

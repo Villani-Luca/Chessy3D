@@ -1,14 +1,13 @@
 '''
 removes duplicates created from load_milvus
 '''
-import math
 import pathlib
 import time
 
 import numpy as np
 import pandas as pd
 
-from src.retrieval.src.model.pgsql import Connection
+from src.retrieval.src.pgsql import Connection
 
 ROOT = pathlib.Path.cwd().parent.parent.parent
 PARQUEET_FOLDER = (ROOT / 'data/retrieval/parqueet')

@@ -14,7 +14,7 @@ from pgvector import Bit
 import sys
 sys.path.extend(r"E:\projects\uni\Chessy3D\src")
 
-from src.retrieval.src.model.pgsql import Connection, PgGamesRepository, PgMovesRepository
+from src.retrieval.src.pgsql import Connection, PgGamesRepository, PgMovesRepository
 from src.retrieval.src.position_embeddings import PositionEmbedder, NaivePositionEmbedder
 
 

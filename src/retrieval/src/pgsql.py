@@ -1,8 +1,6 @@
 import numpy as np
 from pgvector import Bit
 
-from src.retrieval.src.model.game import Game
-
 import psycopg
 from pgvector.psycopg import register_vector
 
@@ -86,7 +84,7 @@ class PgGamesRepository:
     def get_best_games_from_naiveposition(self, position: np.array):
         return self.conn.cursor.execute(
             """
-            SELECT g.id, g.event, g.date, g.white, g.whitetitle, g.black, g.blacktitle, v.embedding <~> $1 as distance, v.embeddingid, g.moves
+            SELECT g.id, g.event, g.date, g.white, g.whitetitle, g.black, g.blacktitle, v.embedding <~> %s as distance, v.embeddingid, g.moves
             from games g
             join moves m on g.id = m.gameid
             join naivevectors v on m.embeddingid = v.embeddingid
