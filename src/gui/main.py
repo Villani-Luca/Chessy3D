@@ -97,7 +97,7 @@ class MainWindow(QWidget):
 
             self.chess_widget.draw_board(chess.Board(None))
             # rgb_image, corners_list, squares_data_original, img, best_canny, best_hough, polygons_image = chess_localization.auto_chessboard_localization(img,resized)
-            final_image, corners_list, squares_data_original, img, best_canny, best_hough, polygons_image, upsize_factor, mask_image = chess_localization.auto_chessboard_localization_alt(img,resized)
+            final_image, corners_list, squares_data_original, img, best_canny, best_hough, polygons_image, upsize_factor, mask_image, projected_canny_img = chess_localization.auto_chessboard_localization_alt(img,resized)
 
             # make prediction
             results = yolo(img)  # resized image
@@ -145,6 +145,7 @@ class MainWindow(QWidget):
             #######
 
             self.file_uploader.set_opencv_image(best_canny, FileUploader.Tabs.CANNY)
+            self.file_uploader.set_opencv_image(projected_canny_img, FileUploader.Tabs.CANNYPROJ)
             self.file_uploader.set_opencv_image(mask_image, FileUploader.Tabs.MASK)
             self.file_uploader.set_opencv_image(best_hough, FileUploader.Tabs.HOUGH)
             self.file_uploader.set_opencv_image(polygons_image, FileUploader.Tabs.SQUARES)
