@@ -158,7 +158,7 @@ def auto_chessboard_localization_alt(image, resized_image):
             # corners_original_draw = corners_original.astype(int)
             # corners_original_draw = [corners_original_draw[0][0], corners_original_draw[0][1], corners_original_draw[0][2], corners_original_draw[0][3]]
 
-            final_candidates.append((corners_original, best_squares_number, hough_image, best_valid_square_image))
+            final_candidates.append((corners_original, best_squares_number, hough_image, best_valid_square_image, mask_image))
 
     if len(final_candidates) > 0:
         i, corners_list = find_best_chessboard_polygon([(x[0].reshape(4, 2), x[1]) for x in final_candidates], resized_image.shape[1], resized_image.shape[0])
@@ -167,7 +167,7 @@ def auto_chessboard_localization_alt(image, resized_image):
         # Display the result
         output_with_corners = resized_image.copy()
         draw_chessboard_squares(output_with_corners, squares_data, corners_list.astype(int))
-        _, _, hough_image, polygons_image = final_candidates[i]
+        _, _, hough_image, polygons_image, mask_image = final_candidates[i]
 
         return output_with_corners, corners_list, squares_data, resized_image, canny_image, hough_image, polygons_image, upsize_factor, mask_image
     else:
