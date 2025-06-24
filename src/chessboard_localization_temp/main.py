@@ -169,6 +169,6 @@ def auto_chessboard_localization_alt(image, resized_image):
         draw_chessboard_squares(output_with_corners, squares_data, corners_list.astype(int))
         _, _, hough_image, polygons_image = final_candidates[i]
 
-        return output_with_corners, corners_list, squares_data, resized_image, canny_image, hough_image, polygons_image, upsize_factor
+        return output_with_corners, corners_list, squares_data, resized_image, canny_image, hough_image, polygons_image, upsize_factor, mask_image
     else:
-        return resized_image, [], [], resized_image, canny_image, resized_image, resized_image, upsize_factor
+        return resized_image, [], [], resized_image, canny_image, resized_image, resized_image, upsize_factor, resized_image

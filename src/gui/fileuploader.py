@@ -10,6 +10,7 @@ class FileUploader(QWidget):
     class Tabs(StrEnum):
         ORIGINAL = "Original"
         CANNY = "Canny"
+        MASK = "Mask"
         HOUGH = "Hough"
         SQUARES = "Squares"
         MESH = "Mesh"
