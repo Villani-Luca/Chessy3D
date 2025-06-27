@@ -2,7 +2,55 @@
 %% - Forsyth–Edwards Notation ( wiki definition )
 %% - explanation
 
-\subsection{What is FEN?}
+\subsection{What is FEN?} 
+``FEN is the abbreviation of Forsyth-Edwards Notation, and it is the standard notation to describe positions of a chess game. Steven J. Edwards, a computer programmer, created this notation system based on another system designed by the journalist David Forsyth.`` 
+\cite{chess:fen}
+\newline
+it allows easy storage and shareability of a position accounting for all the possible hidden states other than piece locations.
 
-FEN is the abbreviation of Forsyth-Edwards Notation, and it is the standard notation to describe positions of a chess game. 
-Steven J. Edwards, a computer programmer,  created this notation system based on another system designed by the journalist David Forsyth
+\subsection{Definition}
+Composed by 6 ASCII strings separated by a space, each describes an aspect of the position.
+
+\begin{itemize}
+    \item {
+        \textbf{Piece placement}: begins from the eigth rank and first file, describes the content of each square using lowercase letters for black, uppercase for white and numbers for empty squares.
+        \begin{center}Initial position\end{center}
+        \begin{center}
+        \textit{rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR}                    
+        \end{center}
+    }
+    \item {
+        \textbf{Active color}: who is going to move next, denoted by "w" or "b"
+        \begin{center}
+        \textit{rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w}                    
+        \end{center}
+    }
+    \item {
+        \textbf{Castling rights}: Uppercase letter comes first and indicates castleing right for white, followed by lowercased for black, "k" indicates king side is available, "q" means that a player may castle queenside
+        \begin{center}
+        \textit{rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq}                    
+        \end{center}
+    }
+    \item {
+        \textbf{Possible En Passant Targets}: if a pawn has moved two squares it is possible to capture en passant, if available the FEN adds the square behind the pawn in algebraic notation, else a "-"
+        \begin{center}
+        \textit{rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -}                    
+        \end{center}
+    }
+    \item {
+        \textbf{Halfmove Clock}: Informs of how many moves both players have made since the last pawn advance or piece capture.
+        \begin{center}
+        \textit{rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0}                    
+        \end{center}
+    }
+    \item {
+        \textbf{Fullmove Number}: Shows the number of completed turns in the game.
+        \begin{center}
+        \textit{rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1}                    
+        \end{center}
+    }
+\end{itemize}
+The ease of understanding and simplicity of the format makes it trivial to implement a parser, 
+thus allowing almost global use of the format across chess related software being the de factor standard to describe a chess position.
+
+

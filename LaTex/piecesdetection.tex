@@ -43,13 +43,10 @@ All the runs showed converged approximately in 200 epochs.
 \label{tab:YOLOv8-results}
 \resizebox{\linewidth}{!}{%
 \begin{tabular}{lccccl}
-\toprule
 \textbf{Run} & \textbf{Precision (B)} & \textbf{Recall (B)} & \textbf{mAP@0.5} & \textbf{mAP@0.5:0.95} \\
-\midrule
 YOLOv8m Run 1 & $\sim$0.88 & $\sim$0.93 & $\sim$0.87 & $\sim$0.75 \\
 YOLOv8m Run 2 & $\sim$0.90 & $\sim$0.95 & $\sim$0.89 & $\sim$0.78 \\
 YOLOv8m Run 3 & $\sim$0.87 & $\sim$0.91 & $\sim$0.85 & $\sim$0.72 \\
-\bottomrule
 \end{tabular}
 }
 \end{table}
@@ -69,13 +66,10 @@ In terms of loss behavior, we decided to use three different loss functions:
 \label{tab:yolov8-loss}
 \resizebox{\linewidth}{!}{%
 \begin{tabular}{lccc}
-\toprule
 \textbf{Run} & \textbf{Classification Loss (cls\_loss)} & \textbf{Box Loss (box\_loss)} & \textbf{DFL Loss (dfl\_loss)} \\
-\midrule
 YOLOv8m Run 1 & $\sim$0.06 & $\sim$0.35 & $\sim$1.10 \\
 YOLOv8m Run 2 & $\sim$0.05 & $\sim$0.32 & $\sim$1.05 \\
 YOLOv8m Run 3 & $\sim$0.07 & $\sim$0.38 & $\sim$1.15 \\
-\bottomrule
 \end{tabular}
 }
 \end{table}
