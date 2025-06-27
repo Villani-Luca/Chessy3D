@@ -33,3 +33,9 @@ models/
 .vs/
 obj/
 bin/
+
+# Latex
+
+LaTex/out
+LaTex/*.synctex.*
+Latex/main.pdf
