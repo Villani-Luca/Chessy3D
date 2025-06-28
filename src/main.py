@@ -3,6 +3,12 @@ import json
 import numpy as np
 import cv2
 import pyautogui
+import itertools
+from ultralytics import YOLO
+from chessboard_localization_temp.localization import (
+    find_chessboard,
+    find_chessboard_squares,
+)
 
 ####################
 
@@ -38,7 +44,7 @@ def display_image_cv2(
 ###################
 
 
-def get_chessboard_corners_dev(file_path):
+def get_real_chessboard_corners(file_path):
     file_name = Path(file_path).name
 
     with open("data/chessred2k/annotations.json") as file:
@@ -66,6 +72,31 @@ def get_chessboard_corners_dev(file_path):
 
     return corners
 
+
+def get_chessboard_corners1(image):
+    img_height, img_width = image.shape[:2]
+    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    upsize_factor = 1
+    parameters_original_size = 1000
+    scale_factor = img_width / parameters_original_size
+
+    canny_threshold_1 = [25, 50, 100, 200, 300, 400]
+    canny_threshold_2 = [50, 100, 200, 300, 400, 500]
+    params = [x for x in itertools.product(canny_threshold_1, canny_threshold_2)]
+    corners_list = find_chessboard(gray_image, params, upsize_factor, scale_factor)
+    return corners_list
+
+
+def get_chessboard_corners2(image):
+
+    model = YOLO("models/board_localization.pt")
+    res = model.predict(
+        image,
+        imgsz=640,
+    )
+
+    return res[0].keypoints.xy.squeeze().cpu().numpy()
 
 def get_chessboard_cells(image, corners):
 
@@ -113,33 +144,47 @@ def find_similar_games(mapping):
     pass
 
 
+def order_corners_clockwise(corners):
+    centroid = np.mean(corners, axis=0)
+    vectors = corners - centroid
+    angles = np.arctan2(vectors[:, 1], vectors[:, 0])
+    sorted_indices = np.argsort(-angles)
+    return corners[sorted_indices]
+
+
 def execute_pipeline(file_path):
 
     image = cv2.imread(file_path)
     # display_image_cv2(image, "image")
 
-    corners = get_chessboard_corners_dev(file_path)
+    corners = get_real_chessboard_corners(file_path)
+    sorted_corners = order_corners_clockwise(corners)
 
-    """
-    for p in corners:
-        cv2.circle(
-            image,
-            ((int)p[0], (int)p[1]),
-            30,
-            (255, 0, 0),
-            -1,
-        )
+    #predicted_corners = get_chessboard_corners1(image)
+    predicted_corners = get_chessboard_corners2(image)
+
+    sorted_predicted_corners = order_corners_clockwise(predicted_corners)
+
+    distances = np.linalg.norm(sorted_corners - sorted_predicted_corners, axis=1)
+    all_match = np.all(distances <= 10.0)
+
+    for p in sorted_corners:
+        cv2.circle(image, (int(p[0]), int(p[1])), 30, (0, 255, 0), -1)
+
+    for p in sorted_predicted_corners:
+        cv2.circle(image, (int(p[0]), int(p[1])), 30, (0, 0, 255), -1)
 
     display_image_cv2(image, "corners")
-    """
 
-    cells = get_chessboard_cells(image, corners)
+    return distances, all_match
 
-    pieces = detect_chess_pieces(image)
+    # cells = get_chessboard_cells(image, corners)
 
-    mapping = find_chess_piece_cell(pieces, cells)
+    # pieces = detect_chess_pieces(image)
 
-    similar_games = find_similar_games(mapping)
+    # mapping = find_chess_piece_cell(pieces, cells)
+
+    # similar_games = find_similar_games(mapping)
 
     # TODO: show in UI
 
@@ -153,8 +198,27 @@ def get_next_image_in_folder(folder_path):
 
 def main():
     paths = get_next_image_in_folder("data/chessred2k/images")
-    for next_path in paths:
-        execute_pipeline(next_path)
+    count = 0
+    errors = 0
+
+    with open("results2.txt", "w") as f:
+        for index, next_path in enumerate(paths):
+            distances, all_match = execute_pipeline(str(next_path))
+            
+            '''
+            count = count + 1
+            f.write(
+                f"image path: {next_path}, distances: {distances}, match: {all_match}\n"
+            )
+
+            if not all_match:
+                errors = errors + 1
+
+            print(f"Step {index}")
+
+             '''
+
+    print(f"Completed: {errors} errors over {count} images -> accuracy: {count-errors/count}")
 
 
 if __name__ == "__main__":
