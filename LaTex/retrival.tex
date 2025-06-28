@@ -6,69 +6,87 @@
 %% - naive approach chose
 %% - possible other approaches ( if not long enough )
 
-\subsection{Current state}
+\subsection{Current storage approaches}
 Although fen is a perfect medium for sharing, storing position and retrieving the exact match, 
 due to its definition it makes comparison between similar but not equal positions using the format
 difficult without parsing and loading both positions in memory, 
-this becomes an hindrance especially when browsing chess databases to find games with similar position due to the computational cost of the operation.
-
-The state of the art for storing and retrieving positions is varied based on the system that utilizes it.
-
-SCID Shane's Chess Information Database one of the most famous tools used to find, navigate and study games, powerful but does not handle search by similarity.
-Lichess, one of the main chess platforms, has a developed a highly efficient format \cite{retrieval:lichess:format} that allows search alike SCID.
-
-This inability to allow search by similarity is mainly because of the hazy, subjective definition of similarity in games as it could be approached from different angles.
-- Pure Positional similarity
-- Threat similarity: attacking and defending pieces
-- Structural similarity: in most games recurring piece structures are created
-
-A novel approached is offered by Ganguly, Debasis and Leveling, Johannes and Jones, Gareth 
-\cite{retrieval:soa:ids} that offers a novel approach by using information retrieval methods applied to a position.
-in which they model a text representation of the position by utilizing positional information, square control, attacking and defending pieces.
-
-In this project we utilized only positional information to build a pure piece positional index similarity.
-
-\subsection{Project}
-Goal: retrieving same or similar position to the given one
-
-we opted for a pure positional information, Although using only the position of the pieces may return only apparently similar games with them being different because 
-slight changes in position could lead to big difference in play, the approach is valid to explore the problem and given a sufficiently large database it will return 
-games in which the position or a position less than two move difference.
-
-by encoding the position in a naive binary embedding of 64 slot of length 12 where the first 6 bits represent the white pieces and the other 6 bits the black pieces, 
-
+becoming an hindrance especially when browsing chess databases to find games with similar position due to the computational cost of the operation.
+\newline
+The state of the art for storing and retrieving positions is varied based on the system that utilizes it. Most famously:
+\begin{itemize}
+    \item 
+    { 
+        For database used for human study, SCID Shane's Chess Information Database \cite{retrieval:scid} one of the most famous tools used to find, navigate and study games, powerful but does not handle search by similarity.
+    }
+    \item 
+    {
+        For storing high volume of data Lichess, one of the main chess platforms, has a developed a highly efficient format \cite{retrieval:lichess:format} that allows search alike SCID.
+    }
+\end{itemize}
+Even if highly efficient and perfect for their respective use cases, this formats do not suit the objective set for this project being the digitalization
+of physical chess position and search of similar position. 
+\newline
+The inability to allow search by similarity is mainly because of the subjective definition of similarity in games, as it could be approached from different points of view.
+\begin{itemize}
+    \item 
+    {
+        \textbf{Pure Positional similarity}: position of pieces on the board
+    }
+    \item 
+    {
+        \textbf{Threat similarity}: attacking and defending pieces
+    }
+    \item
+    {
+        \textbf{Structural similarity}: in most games recurring piece structures are created
+    }
+\end{itemize}
+A novel approach that tries to merge most of the aspects related to similarity was explored by 
+Ganguly, Debasis and Leveling, Johannes and Jones, Gareth 2014 \cite{retrieval:soa:ids} 
+that offers a novel approach by using information retrieval methods applied to a position.
+By modeling a text representation of the position utilizing positional information, square control, attacking and defending pieces 
+to be used inside the standard inverted organization typical of IR. 
+\newline
+In this project we utilized only positional information to build a pure piece positional index similarity, sacrificing similarity accuracy
+for improved performance.
+\subsection{Our method}
+We opted for a pure positional information approach, although using only the position of the pieces may 
+return only apparently similar games with them being different,because of slight changes in position 
+could lead to big difference in play, the approach is valid to explore the problem 
+and given a sufficiently large database it will return games in which the position or a position less than two move difference. 
+\newline
+Given any position, it is encoded in a naive binary embedding of 64 slot of length 12 bits where the first 6 bits represent the white pieces 
+and the other 6 bits the black pieces.
 \begin{figure}[ht]
 \centering
 \includegraphics[width=0.75\linewidth]{retrieval/piece_to_embedding.png}
 \caption{Knight to embedding}
 \label{fig:retrieval:piecetoembedding}
 \end{figure}
+\newline
+This results in a sparse binary vector embedding of length 96 bytes that is an exact one to one of the whole 
+piece positional information of the given position.
 
-1..
-2..
-3..
+\begin{algorithm}[H]
+\caption{Embedding algorithm}\label{retrieval:embedding:algorithm}
+\begin{algorithmic}
+\State $v \gets \text{(96B array)}$
+\State $\mathcal P \gets \text{Board position}$
+\ForEach {$s \in \mathcal P $}
+\If{$s$ is not empty}
+    \State $i \gets \text{computeSquareIndex(s)}$
+    \State $v[i] \gets 1$
+\EndIf
+\EndFor
+\end{algorithmic}
+\end{algorithm}
 
-%% image of a chess piece to an slice of embedding
-
-we can build an exact one to one embedding of positional information of the reached position.
-
-ALGORITMO
-\dots
-\dots
-
-\subsection{Search}
-The search and retrieval of the embeddings is efficiently done trough an hamming distance HNSW index, that enables 
-ranking positions based on the number of flipped bits compared to the anchor embedding.
-in a general we observed that for each 2 unit distances it corresponds to a different piece position, this could be intuitively understood 
-by seeing it as toggling squares, a distance of 2 means a toggle off of one square 
-%% show image %%
-and a toggle on of another square.
-pay attention that this intuition does not generalize in case of captures, castling, en passant... that involve more than one piece moves.
-
+\subsection{Search database creation}
+%% database creation
+%% lumbras => pgn format (breve) % => approccio di costruzione del databse => limitazione hardware 
 by following this approach we were able to construct a chess game database based on LumbrasGigabase \cite{retrieval:lumbrasgigabase} of 15 million games, 
 and approximately 750 million chess positions but due to hardware memory and computation limitations we had to scale the indexing of the positions to allow only 5 million instances.
 
-\subsection{Retrieval database construction}
 the LumbrasGigabase offers games in PGN, portable game notation, that uses a combination of metadata, FEN notation and algebraic notation to describe 
 respectively information about the game, like players, events and such, the starting position and following moves of a games.
 
@@ -77,5 +95,16 @@ respectively information about the game, like players, events and such, the star
 by iterating over each game we extract and processed each position by creating and embedding and an hash to efficiently store the same position used in different games.
 the hash used is a standard chess position hash called Zobrist hashing \cite{retrieval:zobristhash} that returns a 64bit unsigned integer value.
 
-
 %% SOA METHODS https://arxiv.org/html/2310.04086v3 BIBTEX: https://arxiv.org/html/2310.04086v3/#bib.bibx15
+
+%% search
+%% index => hamming distance
+
+\subsection{Distance function}
+The search and retrieval of the embeddings is efficiently done trough an hamming distance HNSW index, that enables 
+ranking positions based on the number of flipped bits compared to the anchor embedding.
+in a general we observed that for each 2 unit distances it corresponds to a different piece position, this could be intuitively understood 
+by seeing it as toggling squares, a distance of 2 means a toggle off of one square 
+%% show image %%
+and a toggle on of another square.
+pay attention that this intuition does not generalize in case of captures, castling, en passant... that involve more than one piece moves.
