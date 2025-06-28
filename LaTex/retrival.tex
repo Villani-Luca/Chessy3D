@@ -14,8 +14,8 @@ this becomes an hindrance especially when browsing chess databases to find games
 
 The state of the art for storing and retrieving positions is varied based on the system that utilizes it.
 
-SCID Shane's Chess Information Database one of the most famous tools used to find, navigate and study games, powerfull but does not handle search by similarity.
-Lichess, one of the main chess platforms, has a developed a highly efficient format that allows search alike SCID.
+SCID Shane's Chess Information Database one of the most famous tools used to find, navigate and study games, powerful but does not handle search by similarity.
+Lichess, one of the main chess platforms, has a developed a highly efficient format \cite{retrieval:lichess:format} that allows search alike SCID.
 
 This inability to allow search by similarity is mainly because of the hazy, subjective definition of similarity in games as it could be approached from different angles.
 - Pure Positional similarity
@@ -35,7 +35,7 @@ we opted for a pure positional information, Although using only the position of 
 slight changes in position could lead to big difference in play, the approach is valid to explore the problem and given a sufficiently large database it will return 
 games in which the position or a position less than two move difference.
 
-by encoding the position in a naive binary embedding of 64 slot of length 12 where one bit represents one of the pieces 
+by encoding the position in a naive binary embedding of 64 slot of length 12 where the first 6 bits represent the white pieces and the other 6 bits the black pieces, 
 
 1..
 2..
@@ -56,7 +56,7 @@ in a general we observed that for each 2 unit distances it corresponds to a diff
 by seeing it as toggling squares, a distance of 2 means a toggle off of one square 
 %% show image %%
 and a toggle on of another square.
-pay attetion that this intuition does not generalize in case of captures, castleing, en passent... that involve more than one piece moves.
+pay attention that this intuition does not generalize in case of captures, castling, en passant... that involve more than one piece moves.
 
 by following this approach we were able to construct a chess game database based on LumbrasGigabase \cite{retrieval:lumbrasgigabase} of 15 million games, 
 and approximately 750 million chess positions but due to hardware memory and computation limitations we had to scale the indexing of the positions to allow only 5 million instances.
@@ -67,7 +67,7 @@ respectively information about the game, like players, events and such, the star
 
 %% example pgn format
 
-by iterating over each game we extract and processed each position by creating and embedding and an hash to effiecienlty store the same position used in different games.
+by iterating over each game we extract and processed each position by creating and embedding and an hash to efficiently store the same position used in different games.
 the hash used is a standard chess position hash called Zobrist hashing \cite{retrieval:zobristhash} that returns a 64bit unsigned integer value.
 
 
