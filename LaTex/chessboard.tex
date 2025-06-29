@@ -18,3 +18,16 @@
 %%      - pipeline: img => gray => bilateral filter => canny => big contours candidates => 
 %%          for each c: projection => vertical / horizontal mask => hough on mask => find squares
 %%          select candidate with most squares => find corners => projection => chessboard squares
+
+\subsection{Summary}
+
+\begin{table}[ht]
+\centering
+\caption{Methods comparison.}
+\label{chessboard:table:methods}
+\begin{tabular}{lcc}
+\textbf{Run} & \textbf{Average accuracy} & \textbf{Average time} \\
+Parallel search & 0.0 & $\sim$121ms \\
+Big contour & 0.0 & $\sim$121ms
+\end{tabular}
+\end{table}
