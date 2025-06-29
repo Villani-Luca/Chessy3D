@@ -82,29 +82,64 @@ piece positional information of the given position.
 \end{algorithm}
 
 \subsection{Search database creation}
-%% database creation
-%% lumbras => pgn format (breve) % => approccio di costruzione del databse => limitazione hardware 
-by following this approach we were able to construct a chess game database based on LumbrasGigabase \cite{retrieval:lumbrasgigabase} of 15 million games, 
-and approximately 750 million chess positions but due to hardware memory and computation limitations we had to scale the indexing of the positions to allow only 5 million instances.
+%% lumbras => pgn format (breve) % => approccio di costruzione del database => limitazione hardware 
 
-the LumbrasGigabase offers games in PGN, portable game notation, that uses a combination of metadata, FEN notation and algebraic notation to describe 
-respectively information about the game, like players, events and such, the starting position and following moves of a games.
+As our chess database of choice we choose LumbrasGigabase \cite{retrieval:lumbrasgigabase}, containing 15 Million games from various sources counting
+to approximately 1 billion unique game positions reached, stored in a standard format called PGN ( portable game notation ) \cite{chess:pgn} supplying 
+game moves and metadata relative to each game useful to populate our database.
+\newline
 
-%% example pgn format
-
-by iterating over each game we extract and processed each position by creating and embedding and an hash to efficiently store the same position used in different games.
-the hash used is a standard chess position hash called Zobrist hashing \cite{retrieval:zobristhash} that returns a 64bit unsigned integer value.
-
-%% SOA METHODS https://arxiv.org/html/2310.04086v3 BIBTEX: https://arxiv.org/html/2310.04086v3/#bib.bibx15
-
-%% search
-%% index => hamming distance
+\begin{mdframed}
+\string[Event "F/S Return Match"\string]\newline
+\string[Site "Belgrade, Serbia JUG"\string]\newline
+\string[Date "1992.11.04"]\string\newline
+\string[Round "29"\string]\newline
+\string[White "Fischer, Robert J."\string]\newline
+\string[Black "Spassky, Boris V."\string]\newline
+\string[Result "1/2-1/2"\string]\newline
+\newline
+1.e4 e5 2.Nf3 Nc6 3.Bb5 {This opening is called the Ruy Lopez.} 3...a6
+4.Ba4 Nf6 5.O-O Be7 6.Re1 b5 7.Bb3 d6 8.c3 O-O 9.h3 Nb8 10.d4 Nbd7
+11.c4 c6 12.cxb5 axb5 13.Nc3 Bb7 14.Bg5 b4 15.Nb1 h6 16.Bh4 c5 17.dxe5
+Nxe4 18.Bxe7 Qxe7 19.exd6 Qf6 20.Nbd2 Nxd6 21.Nc4 Nxc4 22.Bxc4 Nb6
+23.Ne5 Rae8 24.Bxf7+ Rxf7 25.Nxf7 Rxe1+ 26.Qxe1 Kxf7 27.Qe3 Qg5 28.Qxg5
+hxg5 29.b3 Ke6 30.a3 Kd6 31.axb4 cxb4 32.Ra5 Nd5 33.f3 Bc8 34.Kf2 Bf5
+35.Ra7 g6 36.Ra6+ Kc5 37.Ke1 Nf4 38.g3 Nxh3 39.Kd2 Kb5 40.Rd6 Kc5 41.Ra6
+Nf2 42.g4 Bd3 43.Re6 1/2-1/2
+\end{mdframed}
+\begin{center}
+Bobby Fischer vs Boris Spassky, 1992, Yugoslavia, 29th
+\end{center}
+By iterating over each game we extract and process each position by creating its embedding and Zobrist hash \cite{retrieval:zobristhash}, de factor standard 
+hash used to encode a chess position in 64 bit, to efficiently store the same position used in different games. 
+\newline
+Although we had access to a large quantity of high quality games due to hardware memory and computation limitations 
+we had to scale back the indexing of the positions to allow only 5 million instances.
 
 \subsection{Distance function}
-The search and retrieval of the embeddings is efficiently done trough an hamming distance HNSW index, that enables 
-ranking positions based on the number of flipped bits compared to the anchor embedding.
-in a general we observed that for each 2 unit distances it corresponds to a different piece position, this could be intuitively understood 
-by seeing it as toggling squares, a distance of 2 means a toggle off of one square 
-%% show image %%
-and a toggle on of another square.
-pay attention that this intuition does not generalize in case of captures, castling, en passant... that involve more than one piece moves.
+%% index => hamming distance
+The search and retrieval of the embeddings is efficiently done trough an hamming distance HNSW index \cite{retrieval:hnsw},
+a fully graph based index without any need for additional search structures, extension of earlier work on navigable small world graphs. 
+\newline
+The cited index enables an efficient ranking of the saved positions based on the number of flipped bits compared to the anchor embedding.
+\newline
+While not applicable universally we observed that a unit distance of 2 corresponds to a single different piece position, 
+this could be intuitively understood by seeing it as toggling squares, one off square and one on square. 
+\newline %% show image %%
+This does not generalize in case of captures, castling, en passant, or any move that involve more than one piece.
+\pagebreak
+Through the use of the HNSW index we are able to have a considerable speedup in search and retrieval speed on 10 million indexed positions.
+\begin{table}[ht]
+\centering
+\caption{Speed comparison with and without vector index.}
+\label{retrieval:table:vectorindex}
+\begin{tabular}{lc}
+\textbf{Run} & \textbf{Average time} \\
+HNSW & $\sim$121ms \\
+None & $\sim$959ms 
+\end{tabular}
+\end{table}
+By creating the binary embedding, chess database and vector index we have efficiently implemented a retrieval system for similar games able to return
+the closest game in terms of number of moves and piece on the board to a given position.
+
+%% SOA METHODS https://arxiv.org/html/2310.04086v3 BIBTEX: https://arxiv.org/html/2310.04086v3/#bib.bibx15
