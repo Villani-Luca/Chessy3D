@@ -25,8 +25,8 @@ It has been a difficult task to train the model in the right way.
 We tried to fine tune the model found in different ways using some datasets found online.
 The three training runs were conducted with the two datasets in this order:
 \begin{itemize}
-    \item YOLOv8m run 1: A small dataset found on Roboflow, which contains 100 images of chess pieces in different lighting conditions and angles.
-    \item YOLOv8m run 2: ChessRed2K dataset, which contains 2000 images of chess pieces in various conditions.
+    \item YOLOv8m run 1: A small dataset found on Roboflow, which contains 600+ images of chess pieces in different lighting conditions and angles. \cite{cpd:dataset:yolosmall}
+    \item YOLOv8m run 2: ChessRed2K dataset \cite{cpd:dataset:chessred2k}, which contains 2000 images of chess pieces in various conditions.
     \item YOLOv8m run 3: Starting from run 1 we used ChessRed2K dataset for finetuning the model.
 \end{itemize}
 
@@ -78,9 +78,9 @@ The datasets used for training YOLOv8m are summarized in table below.
 \resizebox{\linewidth}{!}{%
 \begin{tabular}{lccccl}
 \textbf{Dataset Name} & \textbf{Nr Images} & \textbf{Nr Training Images} & \textbf{Nr Validation Images} & \textbf{Nr Test Images} \\
-Merge Chess & $\sim$19708 & $\sim$18141 & $\sim$1512 & $\sim$55 \\
-Chess Piece Detection & $\sim$14808 & $\sim$12194 & $\sim$1743 & $\sim$871 \\
-Piece Detector & $\sim$18690 & $\sim$16821 & $\sim$1121 & $\sim$748 \\
+Merge Chess \cite{cpd:dataset:mergechess} & $\sim$19708 & $\sim$18141 & $\sim$1512 & $\sim$55 \\
+Chess Piece Detection \cite{cpd:dataset:chesspiecedetection} & $\sim$14808 & $\sim$12194 & $\sim$1743 & $\sim$871 \\
+Piece Detector \cite{cpd:dataset:piecedetector} & $\sim$18690 & $\sim$16821 & $\sim$1121 & $\sim$748 \\
 \end{tabular}
 }
 \end{table}
