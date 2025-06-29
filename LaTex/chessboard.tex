@@ -12,12 +12,121 @@
 
 
 \subsection{Parallel search method}
+One naive approach we took is a exhaustive search of preset combination of canny parameters. during the development we noticed that canny was the most important step in the current pipeline
+this meant that a bad noisy canny output lead to bad pipeline results.
+
+%% immagine di brutto canny noisy %%
+
+Sparked the idea of parallel search, by handling a N canny images output we could propagate them trough the pipeline and in the final step keep the best results.
+
+\begin{enumerate}
+    \item 
+    {
+        \textbf{Multiple canny}    
+    }
+    {
+        \begin{enumerate}
+            \item 
+            {
+                \textbf{Hough}
+            }
+            \item 
+            {
+                \textbf{Search for squares}
+            }
+            \item 
+            {
+                \textbf{Select best candidate}
+            }
+        \end{enumerate}
+    }
+    \item 
+    {
+        \textbf{Find corners}
+    },
+    \item 
+    {
+        \textbf{Generate squares}
+    }
+\end{enumerate}
+
+
 %%      - pipeline: img => gray => smooth => canny x N => hough x N => search for most squares in candidates => select best candidate => corners => projection => chessboard squares
 
 \subsection{Big contour method}
 %%      - pipeline: img => gray => bilateral filter => canny => big contours candidates => 
 %%          for each c: projection => vertical / horizontal mask => hough on mask => find squares
 %%          select candidate with most squares => find corners => projection => chessboard squares
+While understanding the errors of the parallel methods we tried to approach it from a different constrained angle. 
+This being an assumption that a chessboard is inside the image and is kind of centralized in the image because if a 
+user is taking a photo of a chessboard to digitalize it, it will probably be the center point of the image.
+\newline
+This new line of thinking opened up a possibility of assuming that there's a chessboard in the image.
+\newline
+%% pipeline image %%
+\begin{enumerate}
+    \item 
+    {
+        \textbf{Gray image}: graying the input image to simplify work
+    }
+    \item 
+    {
+        \textbf{Bilateral filter}: to reduce noise without losing edge definition
+    }
+    \item
+    {
+        \textbf{Canny edge detector}: to create a binarized image of only the edges
+    }
+    \item 
+    {
+        \textbf{Finding big contours}: with the assumption that a chessboard is inside of an image, we can search for contours 
+        that have a big area of between 50 and 70 time the expected single square area. Empirically resulting in two to three candidate contours in which 
+        one contains the chessboard. \newline
+        The candidates should not be confused with the final chessboard contour, due to the filtering and design of this step the contours are larger of the true 
+        chessboard contour, this is done on purpose to be sure that the contour contains the chessboard and not find smaller ones that could yield a partial board. 
+    }
+    \item 
+    {
+        All the following steps are done on each of the candidates.
+        \begin{enumerate}
+            \item 
+            {
+                \textbf{Projection}: we project the contents of the canny image inside the quadrilateral approximation of the candidate contour, 
+                if a chessboard is contained inside the image this step will generate an image that has mostly vertical and horizontal edges.
+            }
+            \item
+            {
+                \textbf{Vertical and horizontal masking}: by creating and applying one vertical kernel and one horizontal kernel, it filters out most
+                of the noise added by the edges of the pieces. \newline
+                This step works on the assumption that most chess sets are compose of rounded pieces and thus allows to clean up the image of the most 
+                error generating factor when trying to find lines.
+            }
+            \item
+            {
+                \textbf{Line extension and cleanup}: trough a Hough line transformation that detects lines at least longer than 80\% of a 
+                single square and can fill at most a 50\% of the expect chessboard length gap, we are able to create a clean chessboard image that 
+                contains the whole projected board.
+            }
+            \item
+            {
+                \textbf{Squares extraction}: by finding all the contours of the image and strict filtering for what we expect to be a square 
+                we can create a last image that has only the detected squares.
+            }
+            \item
+            {
+                \textbf{Contour and corner extraction}: the corners are found by extracting and approximating to a quadrilateral the largest contours that encapsulates all 
+                the detected dilated squares. \newline
+                to choose the best candidate we filter on amount of squares and centrality on the image.
+            }
+        \end{enumerate}
+    }
+    \item 
+    {
+        \textbf{Mapping all the squares}: having the corners of the image we can divide it in a 64 square grid that yields that final squares used in the matching steps with the
+        chess piece detection module.
+    }
+\end{enumerate}
+
 
 \subsection{Summary}
 
