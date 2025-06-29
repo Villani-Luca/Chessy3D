@@ -2,7 +2,19 @@
 %%      - pro e contro
 %% secondo metodo con ricerca parallela del miglior hough e canny
 %%      - pro e contro
+%%      - pipeline: img => gray => smooth => canny x N => hough x N => search for most squares in candidates => select best candidate => corners => projection => chessboard squares
 %% miglior metodo trovato
-%%      - pipeline
+%%      - pipeline: img => gray => bilateral filter => canny => big contours candidates => 
+%%          for each c: projection => vertical / horizontal mask => hough on mask => find squares
+%%          select candidate with most squares => find corners => projection => chessboard squares
 %%      - pro
 %%      - limitazioni
+
+
+\subsection{Parallel search method}
+%%      - pipeline: img => gray => smooth => canny x N => hough x N => search for most squares in candidates => select best candidate => corners => projection => chessboard squares
+
+\subsection{Big contour method}
+%%      - pipeline: img => gray => bilateral filter => canny => big contours candidates => 
+%%          for each c: projection => vertical / horizontal mask => hough on mask => find squares
+%%          select candidate with most squares => find corners => projection => chessboard squares
