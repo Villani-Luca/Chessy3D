@@ -39,3 +39,11 @@ bin/
 LaTex/out
 LaTex/*.synctex.*
 Latex/main.pdf
+LaTex/main.aux
+.gitignore
+LaTex/main.blg
+.gitignore
+LaTex/main.bbl
+LaTex/main.fdb_latexmk
+LaTex/main.fls
+LaTex/main.log

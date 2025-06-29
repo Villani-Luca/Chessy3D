@@ -21,6 +21,8 @@ We conducted three training runs with different parameters like:
 \end{itemize}
 The training was performed using PyTorch 2.1 on an NVIDIA RTX 3090 GPU with 24GB of VRAM.
 
+It has been a difficult task to train the model in the right way.
+We tried to fine tune the model found in different ways using some datasets found online.
 The three training runs were conducted with the two datasets in this order:
 \begin{itemize}
     \item YOLOv8m run 1: A small dataset found on Roboflow, which contains 100 images of chess pieces in different lighting conditions and angles.
@@ -28,9 +30,6 @@ The three training runs were conducted with the two datasets in this order:
     \item YOLOv8m run 3: Starting from run 1 we used ChessRed2K dataset for finetuning the model.
 \end{itemize}
 
-The YOLOv8m model performed well, achieving a mean Average Precision (mAP) of
- approximately 0.87 at IoU threshold 0.5 and a
-  mAP of approximately 0.77 at IoU thresholds from 0.5 to 0.95.
 
 As we can see in the table below, the model achieved high precision
  and recall values across the three training runs,
@@ -46,23 +45,15 @@ All the runs showed converged approximately in 200 epochs.
 \textbf{Run} & \textbf{Precision (B)} & \textbf{Recall (B)} & \textbf{mAP@0.5} & \textbf{mAP@0.5:0.95} \\
 YOLOv8m Run 1 & $\sim$0.88 & $\sim$0.93 & $\sim$0.87 & $\sim$0.75 \\
 YOLOv8m Run 2 & $\sim$0.90 & $\sim$0.95 & $\sim$0.89 & $\sim$0.78 \\
-YOLOv8m Run 3 & $\sim$0.87 & $\sim$0.91 & $\sim$0.85 & $\sim$0.72 \\
+YOLOv8m Run 3 & $\sim$0.99 & $\sim$0.99 & $\sim$0.995 & $\sim$0.99482 \\
 \end{tabular}
 }
 \end{table}
 
-
-In terms of loss behavior, we decided to use three different loss functions:
-\begin{itemize}
-    \item Classification Loss: it measures the accuracy of the model predictions in classfiying the class inside the bounding box.
-    For this loss YOLOv8m uses a binary cross-entropy loss function.
-    \item Box Loss: it measures the accuracy of the model in predicting bounding box positions and sizes. It's calculated with a combinantion of IoU (Interection over Union).
-    \item Distribution Focal Loss: this loss function is an advanced feature of YOLOv8. It measures the accuracy of the model in identifying the presence of objects inside the image. It's used to handle better small objects.
-\end{itemize}
-
+With the corrisponding loss values:
 \begin{table}[ht]
 \centering
-\caption{Final loss values for the three YOLOv8m runs. All values are approximate and taken at convergence (step $\sim$200).}
+\caption{Loss values for the three YOLOv8m runs. All values are approximate and taken at convergence (step $\sim$200).}
 \label{tab:yolov8-loss}
 \resizebox{\linewidth}{!}{%
 \begin{tabular}{lccc}
@@ -74,12 +65,52 @@ YOLOv8m Run 3 & $\sim$0.07 & $\sim$0.38 & $\sim$1.15 \\
 }
 \end{table}
 
+After the training runs, we used the best model from the third run of YOLOv8m for chess-piece object detection.
+We found out that the model has overfitted the training data, achieving very high precision and recall values on that dataset but not performing well on unseen data.
+
+After that we decided to find better dataset for training the model and start a training run from scratch.
+We found out multiple datasets online on Roboflow in order to start multiple training runs and find the best model for chess-piece object detection.
+The datasets used for training YOLOv8m are summarized in table below.
+\begin{table}[ht]
+\centering
+\caption{Datasets used for training YOLOv8m.}
+\label{tab:YOLOv8-datasets}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lccccl}
+\textbf{Dataset Name} & \textbf{Nr Images} & \textbf{Nr Training Images} & \textbf{Nr Validation Images} & \textbf{Nr Test Images} \\
+Merge Chess & $\sim$19708 & $\sim$18141 & $\sim$1512 & $\sim$55 \\
+Chess Piece Detection & $\sim$14808 & $\sim$12194 & $\sim$1743 & $\sim$871 \\
+Piece Detector & $\sim$18690 & $\sim$16821 & $\sim$1121 & $\sim$748 \\
+\end{tabular}
+}
+\end{table}
+
+After many training runs we found out that the best model was with the second dataset,
+which was trained for 200 epochs with a batch size of 16 and image size of 640 and an initial learning rate set by the model.
+
+We used the YOLOv8m model, which is a medium-sized version of the YOLOv8 architecture, suitable for our chess-piece detection task.
+
+In terms of loss behavior, we decided to use three different loss functions:
+\begin{itemize}
+    \item Classification Loss: it measures the accuracy of the model predictions in classifying the class inside the bounding box.
+    For this loss YOLOv8m uses a binary cross-entropy loss function.
+    \item Box Loss: it measures the accuracy of the model in predicting bounding box positions and sizes. It's calculated with a combination of IoU (Intersection over Union).
+    \item Distribution Focal Loss: this loss function is an advanced feature of YOLOv8. It measures the accuracy of the model in identifying the presence of objects inside the image. It's used to handle better small objects.
+\end{itemize}
+
+\begin{table}[ht]
+\centering
+\caption{Final loss values for the dataset: Chess Piece Detection. All values are approximate and taken at convergence}
+\label{tab:yolov8-loss}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lccc}
+\textbf{Run} & \textbf{Classification Loss (cls\_loss)} & \textbf{Box Loss (box\_loss)} & \textbf{DFL Loss (dfl\_loss)} \\
+CPD Run 1 - 150epochs & $\sim$0.29669 & $\sim$0.73001 & $\sim$0.93347 \\
+CPD Run 2 - 200epochs & $\sim$0.05 & $\sim$0.32 & $\sim$1.05 \\
+CPD Run 3 - 250epochs & $\sim$0.07 & $\sim$0.38 & $\sim$1.15 \\
+\end{tabular}
+}
+\end{table}
+
 Compared to earlier training runs and attempts with DETR that showed high loss values and poor convergence, YOLOv8m performed significantly better in terms of loss values and detection robustness.
 We decided to use the third run of YOLOv8m as our final model for chess-piece object detection, as it showed the best performance in terms of precision, recall, and mAP values.
-
-\begin{figure}[ht]
-\centering
-\includegraphics[width=\linewidth]{detection/PR-runs-obj.png}
-\caption{Precision-Recall curve for YOLOv8m. Yellow: Run 1, Green: Run 2, Red: Run 3. }
-\label{fig:chess-detection}
-\end{figure}
