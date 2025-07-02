@@ -30,7 +30,7 @@ class ChessBoard(QGraphicsView):
         super().resizeEvent(event)
         self.draw_board()
 
-    def draw_board(self, board = None, differences = None):
+    def draw_board(self, board = None, differences = None, confidences = None):
         differences = differences if differences is not None else []
 
         if board is not None:
@@ -75,10 +75,23 @@ class ChessBoard(QGraphicsView):
                 if piece is not None:
                     self.draw_piece(row, col, piece)
 
+                    if confidences is not None:
+                        confidence = confidences[position]
+                        confidence_text = f"{confidence:.2f}"
+                        text_item = QGraphicsSimpleTextItem(confidence_text)
+                        text_item.setBrush(QBrush("red"))
+                        text_item.setZValue(2)
+                        # Position near the right edge of the cell
+                        text_item.setPos(
+                            col * self.cell_size + self.cell_size - 25,  # 25 px offset from the right
+                            row * self.cell_size + 2  # small top padding
+                        )
+                        scene.addItem(text_item)
 
 
 
-    def draw_piece(self, row: int, col: int, piece: chess.Piece, confidence: float | None = None):
+
+    def draw_piece(self, row: int, col: int, piece: chess.Piece):
         scene = self.scene()
 
         piece_id = piece.piece_type + (0 if piece.color else 6)
@@ -99,6 +112,8 @@ class ChessBoardWidget(QWidget):
 
         self.board = board
         self.saved_board = None
+        self.confidences = None
+        self.show_confidence = False
 
         layout = QVBoxLayout(self)
 
@@ -128,12 +143,26 @@ class ChessBoardWidget(QWidget):
         self.reset_relative_board_btn.clicked.connect(self.reset_relative_board)
         self.reset_relative_board_btn.setVisible(False)
 
+        self.toggle_confidence_btn = QPushButton("Show Confidence")
+        self.toggle_confidence_btn.setCheckable(True)
+        self.toggle_confidence_btn.toggled.connect(self.toggle_confidence_display)
+
         button_layout.addWidget(self.rotate_left_btn)
         button_layout.addWidget(self.rotate_right_btn)
         button_layout.addWidget(self.fen_textbox)
         button_layout.addWidget(self.copy_fen_btn)
         button_layout.addWidget(self.reset_relative_board_btn)
+        button_layout.addWidget(self.toggle_confidence_btn)
+
         layout.addLayout(button_layout)
+
+    def toggle_confidence_display(self, checked):
+        self.show_confidence = checked
+        self.toggle_confidence_btn.setText("Hide Confidence" if checked else "Show Confidence")
+        self.chess_view.draw_board(
+            self.board,
+            confidences=self.confidences if self.show_confidence else None
+        )
 
     def __rotate_board(self, right=False):
         new_board = chess.Board(None)
@@ -156,11 +185,12 @@ class ChessBoardWidget(QWidget):
         self.chess_view.draw_board(self.board)
         self.update_fen_textbox()
 
-    def draw_board(self, board = None):
-        self.board = board
+    def draw_board(self, board = None, confidences = None):
+        self.board = board or self.board
+        self.confidences = confidences
         self.update_fen_textbox()
         self.reset_relative_board()
-        self.chess_view.draw_board(self.board)
+        self.chess_view.draw_board(self.board, confidences=self.confidences if self.show_confidence else None)
 
     def retrieve_embedding(self, embedder: PositionEmbedder):
         return embedder.embedding(self.board)
@@ -184,6 +214,7 @@ class ChessBoardWidget(QWidget):
         self.update_fen_textbox()
         self.rotate_left_btn.setVisible(True)
         self.rotate_right_btn.setVisible(True)
+        self.toggle_confidence_btn.setVisible(True)
         self.chess_view.draw_board(self.board)
 
     def show_relative_board(self, board: chess.Board, event: str, white_player: str, black_player: str):
@@ -211,3 +242,4 @@ class ChessBoardWidget(QWidget):
         self.update_fen_textbox()
         self.rotate_left_btn.setVisible(False)
         self.rotate_right_btn.setVisible(False)
+        self.toggle_confidence_btn.setVisible(False)

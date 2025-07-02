@@ -113,6 +113,7 @@ class MainWindow(QWidget):
 
                     x1, y1, x2, y2 = int(box[0]), int(box[1]), int(box[2]), int(box[3])  # take coordinates
                     class_id = int(result.boxes.cls[idx])
+                    confidence = float(result.boxes.conf[idx])
 
                     # find middle of bounding boxes for x and y
                     x_mid = int((x1 + x2) / 2)
@@ -122,7 +123,7 @@ class MainWindow(QWidget):
                     for cell_value, coordinates in coord_dict.items():
                         if cv2.pointPolygonTest(np.array(coordinates).reshape(-1, 1, 2), (x_mid, y_mid), False) >= 0:
                             # add cell values and piece cell_value(class value
-                            game_list.append([cell_value, class_id])
+                            game_list.append([cell_value, class_id, confidence])
                             break
 
                     # custom draw yolo result on image
@@ -151,12 +152,15 @@ class MainWindow(QWidget):
             self.file_uploader.set_opencv_image(polygons_image, FileUploader.Tabs.SQUARES)
             self.file_uploader.set_opencv_image(mesh_img, FileUploader.Tabs.MESH)
             self.file_uploader.set_opencv_image(final_image, FileUploader.Tabs.FINAL)
+
+            confidences = np.empty(64, dtype=float)
             new_board = chess.Board(None)
-            for (cell, detected_class) in game_list:
+            for (cell, detected_class, conf) in game_list:
                 piece = chess.Piece(piece_mapping[detected_class][0], piece_mapping[detected_class][1])
                 new_board.set_piece_at(cell - 1, piece)
+                confidences[cell-1] = conf
 
-            self.chess_widget.draw_board(new_board)
+            self.chess_widget.draw_board(new_board, confidences=confidences)
             self.file_uploader.open_tab(FileUploader.Tabs.FINAL)
 
         def __on_row_dblclick(row_data):
@@ -204,7 +208,8 @@ if __name__ == "__main__":
         'pgconn': r"host=localhost user=postgres password=password dbname=chessy",
         #"milvus_url": r"http://localhost:19530",
         #"milvus_collection": NAIVE_COLLECTION_NAME,
-        "object_detection_yolo": r"E:\projects\uni\Chessy3D\src\object_detection_yolo\chess-model-yolov8m.pt",
+        # "object_detection_yolo": r"E:\projects\uni\Chessy3D\src\object_detection_yolo\chess-model-yolov8m.pt",
+        "object_detection_yolo": r"E:\projects\uni\Chessy3D\src\object_detection_yolo\last.pt",
         # "object_detection_yolo": r"E:\projects\uni\Chessy3D\src\object_detection_yolo\20250623_finetune_50.pt",
         "piece_mapping": piece_mapping_yolo1,
         # "object_detection_yolo": r"E:\projects\uni\Chessy3D\src\object_detection_yolo\best_final.pt",
