@@ -1,142 +1,100 @@
-%% primo metodo classico tramite righe e raddrizzamento
-%%      - pro e contro
-%% secondo metodo con ricerca parallela del miglior hough e canny
-%%      - pro e contro
-%%      - pipeline: img => gray => smooth => canny x N => hough x N => search for most squares in candidates => select best candidate => corners => projection => chessboard squares
-%% miglior metodo trovato
-%%      - pipeline: img => gray => bilateral filter => canny => big contours candidates => 
-%%          for each c: projection => vertical / horizontal mask => hough on mask => find squares
-%%          select candidate with most squares => find corners => projection => chessboard squares
-%%      - pro
-%%      - limitazioni
+Detecting a chessboard in an image involves identifying both the grid corners and the bounding boxes of all individual cells. Unlike standard calibration setups, where the chessboard is fully visible, our task required robustness to real-world conditions, including partial occlusions from chess pieces and inconsistent lighting. In these cases, lines and corners may not be clearly visible, making standard chessboard detection techniques unreliable. Over the course of this project, we evaluated a variety of techniques, refining our approach over time to improve accuracy and robustness. This section summarizes the main methods we explored, followed by a detailed description of the final solution adopted in our system.
 
+\subsection{Line-Based Detection}
 
-\subsection{Parallel search method}
-One naive approach we took is a exhaustive search of preset combination of canny parameters. during the development we noticed that canny was the most important step in the current pipeline
-this meant that a bad noisy canny output lead to bad pipeline results.
+This approach aims to reconstruct the chessboard grid starting from strong edges features. After detecting line segments using the Hough Transform, we extend and merge them to improve continuity and reduce fragmentation. The goal is to recover as much of the grid structure as possible, even when parts are occluded by chess pieces.
 
-%% immagine di brutto canny noisy %%
+To reduce computational complexity and increase robustness, the detected lines are clustered into vertical-ish and horizontal-ish directions using \textit{k}-means based on their angles. Intersections between these classified lines are then computed to identify potential quadrilateral shapes that correspond to individual chessboard cells.
 
-Sparked the idea of parallel search, by handling a N canny images output we could propagate them trough the pipeline and in the final step keep the best results.
+In the final stage, the algorithm searches for a regular 8x8 square pattern among the candidate quads. If some cells are missing due to occlusions, their positions are inferred by extrapolating from nearby detected cells. Once a complete grid is hypothesized, the enclosing quadrilateral is used to determine the overall chessboard corners.
 
-\begin{enumerate}
-    \item 
-    {
-        \textbf{Multiple canny}    
-    }
-    {
-        \begin{enumerate}
-            \item 
-            {
-                \textbf{Hough}
-            }
-            \item 
-            {
-                \textbf{Search for squares}
-            }
-            \item 
-            {
-                \textbf{Select best candidate}
-            }
-        \end{enumerate}
-    }
-    \item 
-    {
-        \textbf{Find corners}
-    },
-    \item 
-    {
-        \textbf{Generate squares}
-    }
-\end{enumerate}
+\textbf{Limitations:}
+\begin{itemize}
+  \item Sensitive to noise and small edge artifacts.
+  \item Struggles with occlusions that hide or break lines.
+  \item Requires careful tuning of thresholds and clustering parameters.
+  \item Computationally heavy due to multiple processing stages.
+\end{itemize}
 
+\subsection{Contour-Based Detection}
 
-%%      - pipeline: img => gray => smooth => canny x N => hough x N => search for most squares in candidates => select best candidate => corners => projection => chessboard squares
+This approach begins by detecting contours in the image rather than lines. The contours are approximated to polygons with fewer vertices to simplify their shapes. The polygons are then filtered based on the number of vertices (specifically looking for quadrilaterals) and their areas, aiming to identify candidate quads that correspond to chessboard cells. 
 
-\subsection{Big contour method}
-%%      - pipeline: img => gray => bilateral filter => canny => big contours candidates => 
-%%          for each c: projection => vertical / horizontal mask => hough on mask => find squares
-%%          select candidate with most squares => find corners => projection => chessboard squares
-While understanding the errors of the parallel methods we tried to approach it from a different constrained angle. 
-This being an assumption that a chessboard is inside the image and is kind of centralized in the image because if a 
-user is taking a photo of a chessboard to digitalize it, it will probably be the center point of the image.
-\newline
-This new line of thinking opened up a possibility of assuming that there's a chessboard in the image.
-\newline
-%% pipeline image %%
-\begin{enumerate}
-    \item 
-    {
-        \textbf{Gray image}: graying the input image to simplify work
-    }
-    \item 
-    {
-        \textbf{Bilateral filter}: to reduce noise without losing edge definition
-    }
-    \item
-    {
-        \textbf{Canny edge detector}: to create a binarized image of only the edges
-    }
-    \item 
-    {
-        \textbf{Finding big contours}: with the assumption that a chessboard is inside of an image, we can search for contours 
-        that have a big area of between 50 and 70 time the expected single square area. Empirically resulting in two to three candidate contours in which 
-        one contains the chessboard. \newline
-        The candidates should not be confused with the final chessboard contour, due to the filtering and design of this step the contours are larger of the true 
-        chessboard contour, this is done on purpose to be sure that the contour contains the chessboard and not find smaller ones that could yield a partial board. 
-    }
-    \item 
-    {
-        All the following steps are done on each of the candidates.
-        \begin{enumerate}
-            \item 
-            {
-                \textbf{Projection}: we project the contents of the canny image inside the quadrilateral approximation of the candidate contour, 
-                if a chessboard is contained inside the image this step will generate an image that has mostly vertical and horizontal edges.
-            }
-            \item
-            {
-                \textbf{Vertical and horizontal masking}: by creating and applying one vertical kernel and one horizontal kernel, it filters out most
-                of the noise added by the edges of the pieces. \newline
-                This step works on the assumption that most chess sets are compose of rounded pieces and thus allows to clean up the image of the most 
-                error generating factor when trying to find lines.
-            }
-            \item
-            {
-                \textbf{Line extension and cleanup}: trough a Hough line transformation that detects lines at least longer than 80\% of a 
-                single square and can fill at most a 50\% of the expect chessboard length gap, we are able to create a clean chessboard image that 
-                contains the whole projected board.
-            }
-            \item
-            {
-                \textbf{Squares extraction}: by finding all the contours of the image and strict filtering for what we expect to be a square 
-                we can create a last image that has only the detected squares.
-            }
-            \item
-            {
-                \textbf{Contour and corner extraction}: the corners are found by extracting and approximating to a quadrilateral the largest contours that encapsulates all 
-                the detected dilated squares. \newline
-                to choose the best candidate we filter on amount of squares and centrality on the image.
-            }
-        \end{enumerate}
-    }
-    \item 
-    {
-        \textbf{Mapping all the squares}: having the corners of the image we can divide it in a 64 square grid that yields that final squares used in the matching steps with the
-        chess piece detection module.
-    }
-\end{enumerate}
+Once candidate quadrilaterals are identified, we compute the smallest enclosing quadrilateral that contains all these candidate cells. This enclosing quad serves as the estimated chessboard boundary.
 
+The cells' bounding boxes are then calculated by applying a homography transformation to the image using the chessboard corners and splitting the image into a regular 8x8 grid. This allows the algorithm to fill gaps when some cells are not directly detected.
 
-\subsection{Summary}
+\textbf{Limitations:}
+\begin{itemize}
+  \item Needs careful tuning to keep only meaningful shapes.
+  \item Sometimes detects false quads from background clutter.
+  \item Struggles if the chessboard is viewed at a strong angle.
+  \item Depends on enough cells being detected to find the board boundary.
+\end{itemize}
 
-\begin{table}[ht]
-\centering
-\caption{Methods comparison.}
-\label{chessboard:table:methods}
-\begin{tabular}{lcc}
-\textbf{Run} & \textbf{Average accuracy} & \textbf{Average time} \\
-Parallel search & 0.0 & $\sim$121ms \\
-Big contour & 0.0 & $\sim$121ms
-\end{tabular}
-\end{table}
+\subsection{Parallel Multi-Parameter Contour-Based Detection}
+
+This is a variant of the Contour-Based approach where instead of using fixed parameters, a range of thresholds is tried by running multiple pipelines in parallel. Each configuration applies different Canny and Hough parameter settings, and the one that produces the highest number of valid squares is selected as the best candidate.
+
+\textbf{Limitations:}
+\begin{itemize}
+  \item Increased computational cost due to running multiple Canny and Hough parameter sets in parallel.
+  \item Risk of false positives if no parameter combination perfectly matches the image.
+  \item Requires a clear metric to select the optimal parameter set.
+  \item Adds complexity in implementation and tuning compared to fixed-parameter methods.
+\end{itemize}
+
+\subsection{Deep Learning Corner Keypoint Detection}
+
+Instead of using classical computer vision techniques, this approach uses a fine-tuned YOLOv11 pose estimation model to directly detect the four chessboard corners as keypoints. While the model achieved good quantitative metrics, the predicted keypoint locations were not always precise enough for reliable use. 
+
+The model was trained on the ChessRed2K dataset, which provides annotated corner positions for supervision. The main drawback was that the model failed to generalize to other images outside the dataset, often not detecting any corners at all. Likely, a larger and more diverse training set would be needed to make this solution viable.
+
+\textbf{Limitations:}
+\begin{itemize}
+  \item Limited generalization beyond the specific training dataset.
+  \item Keypoint localization accuracy was insufficient for precise corner detection.
+  \item Requires a large, diverse annotated dataset for robust performance.
+  \item Heavy computational resources needed for training and inference.
+  \item Post-processing is necessary to refine noisy or missing keypoints.
+\end{itemize}
+
+\subsection{Top-Down Contour-Based Chessboard Detection (Chosen approach)}
+
+This was the final chosen approach. This method is contour-based but follows a top-down strategy rather than building up from detected edges. It assumes the chessboard is fully visible within the image, roughly centered, and occupies a significant portion of the frame. The approach starts by identifying the largest quadrilateral contours in the image, which serve as candidate chessboards.
+
+For each candidate, a projection is applied to straighten the quadrilateral region. Then, two morphological filters are applied separately to isolate vertical and horizontal lines, effectively removing non-grid elements such as chess pieces. With this cleaned-up candidate, the Hough transform is used to detect grid lines, and the pipeline continues similarly to the contour-based detection approach to extract the grid and corners.
+
+\textbf{Detailed Step-by-Step Process}
+\begin{itemize}
+    \item \textbf{Grayscale Conversion}: Convert the input image to grayscale.
+    
+    \item \textbf{Bilateral Filtering}: Apply a bilateral filter to reduce noise while preserving edge sharpness.
+    
+    \item \textbf{Canny Edge Detection}: Generate a binary edge map using the Canny edge detector.
+    
+    \item \textbf{Finding Large Contours}: Search for contours with areas approximately 50 to 70 times the expected area of a single chessboard cell. This heuristic typically returns two or three candidate contours, one of which contains the entire chessboard. Note that these candidate contours are intentionally larger than the actual chessboard to ensure full coverage and avoid partial detections.
+    
+    \item \textbf{Processing Each Candidate Contour}:
+    \begin{itemize}
+        \item \textbf{Projection}: Apply a geometric projection to warp the contents within the candidate’s quadrilateral contour into a normalized, axis-aligned rectangle. This step aligns the chessboard so that most edges become vertical or horizontal.
+        
+        \item \textbf{Vertical and Horizontal Masking}: Use separate morphological kernels to isolate vertical and horizontal lines. This filtering reduces noise caused primarily by the rounded shapes of chess pieces, enhancing grid line clarity.
+        
+        \item \textbf{Line Extension and Cleanup}: Perform a Probabilistic Hough Line Transform to detect and extend lines that are at least 80\% the length of a single chessboard square and fill gaps up to 50\% of the expected square length. This generates a clean grid representation of the projected chessboard.
+        
+        \item \textbf{Square Extraction}: Detect contours on the cleaned image and filter them strictly to identify squares that correspond to individual chessboard cells.
+        
+        \item \textbf{Contour and Corner Extraction}: Extract the largest contour that encloses all detected squares and approximate it to a quadrilateral to estimate the chessboard boundary. Among multiple candidates, select the one with the highest number of detected squares and best centrality within the image.
+    \end{itemize}
+    
+    \item \textbf{Mapping the Chessboard Grid}: With the estimated corners, divide the quadrilateral into a regular 8x8 grid. This grid defines the bounding boxes of all chessboard cells, which are used in subsequent steps such as chess piece detection and recognition.
+\end{itemize}
+
+\textbf{Limitations:}
+\begin{itemize}
+  \item Relies on strong assumptions: chessboard must be fully visible and centered.
+  \item Fails if the chessboard is partially outside the image or very small.
+  \item Sensitive to contour detection errors—largest quadrilateral might not be the board.
+  \item Less effective in cluttered scenes with multiple large quadrilaterals.
+\end{itemize}
