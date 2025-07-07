@@ -8,6 +8,21 @@ To reduce computational complexity and increase robustness, the detected lines a
 
 In the final stage, the algorithm searches for a regular 8x8 square pattern among the candidate quads. If some cells are missing due to occlusions, their positions are inferred by extrapolating from nearby detected cells. Once a complete grid is hypothesized, the enclosing quadrilateral is used to determine the overall chessboard corners.
 
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.75\linewidth]{chessboard/line_method1.jpg}
+\caption{Line detection and clustering}
+\label{fig:retrieval:piecetoembedding}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.75\linewidth]{chessboard/line_method2.jpg}
+\caption{Quads retrieved from the line intersections}
+\label{fig:retrieval:piecetoembedding}
+\end{figure}
+
+
 \textbf{Limitations:}
 \begin{itemize}
   \item Sensitive to noise and small edge artifacts.
@@ -36,6 +51,22 @@ The cells' bounding boxes are then calculated by applying a homography transform
 
 This is a variant of the Contour-Based approach where instead of using fixed parameters, a range of thresholds is tried by running multiple pipelines in parallel. Each configuration applies different Canny and Hough parameter settings, and the one that produces the highest number of valid squares is selected as the best candidate.
 
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.75\linewidth]{chessboard/parallel_1.jpg}
+\caption{Thresholding and Canny parameters exploration}
+\label{fig:retrieval:piecetoembedding}
+\end{figure}
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.75\linewidth]{chessboard/parallel_2.jpg}
+\caption{Hough parameters exploration}
+\label{fig:retrieval:piecetoembedding}
+\end{figure}
+
+
+
 \textbf{Limitations:}
 \begin{itemize}
   \item Increased computational cost due to running multiple Canny and Hough parameter sets in parallel.
@@ -49,6 +80,22 @@ This is a variant of the Contour-Based approach where instead of using fixed par
 Instead of using classical computer vision techniques, this approach uses a fine-tuned YOLOv11 pose estimation model to directly detect the four chessboard corners as keypoints. While the model achieved good quantitative metrics, the predicted keypoint locations were not always precise enough for reliable use. 
 
 The model was trained on the ChessRed2K dataset, which provides annotated corner positions for supervision. The main drawback was that the model failed to generalize to other images outside the dataset, often not detecting any corners at all. Likely, a larger and more diverse training set would be needed to make this solution viable.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.75\linewidth]{chessboard/ml_keypoint_1.jpg}
+\caption{Good prediction}
+\label{fig:retrieval:piecetoembedding}
+\end{figure}
+
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.75\linewidth]{chessboard/ml_keypoint_2.jpg}
+\caption{Inaccurate prediction}
+\label{fig:retrieval:piecetoembedding}
+\end{figure}
+
 
 \textbf{Limitations:}
 \begin{itemize}
