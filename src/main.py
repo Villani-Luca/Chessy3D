@@ -1,5 +1,8 @@
+import time
 from pathlib import Path
 import json
+from typing import Callable
+
 import numpy as np
 import cv2
 import pyautogui
@@ -9,6 +12,8 @@ from chessboard_localization_temp.localization import (
     find_chessboard,
     find_chessboard_squares,
 )
+import chessboard_localization_temp.main as local_temp
+import concurrent.futures
 
 ####################
 
@@ -43,35 +48,43 @@ def display_image_cv2(
 
 ###################
 
-
-def get_real_chessboard_corners(file_path):
-    file_name = Path(file_path).name
-
-    with open("data/chessred2k/annotations.json") as file:
+# <filename>: corners
+parsed: dict[str, tuple[str, str, np.typing.ArrayLike]]|None = {}
+def load_real_chessboard_corners(annotation_path: str):
+    with open(annotation_path) as file:
         parsed_file = json.load(file)
 
-    img_info = next(
-        img for img in parsed_file["images"] if img["file_name"] == file_name
-    )
-    img_id = img_info["id"]
-    corner_annotations = [
-        a for a in parsed_file["annotations"]["corners"] if a["image_id"] == img_id
-    ]
+        # filename, path, id
+        images_info = {}
 
-    if len(corner_annotations) == 0:
-        return None
+        for img in parsed_file["images"]:
+            images_info[img["id"]] = (img["id"], img["file_name"], img["path"])
 
-    img_corner_info = corner_annotations[0]["corners"]
+        for img in parsed_file["annotations"]["corners"]:
+            if img["image_id"] in images_info:
+                info = images_info[img["image_id"]]
+                img_corner_info = img["corners"]
 
-    corners = np.zeros((4, 2), dtype=np.float32)
+                parsed[info[0]] = (
+                    info[1],
+                    info[2],
+                    np.array([
+                        img_corner_info["top_left"],
+                        img_corner_info["top_right"],
+                        img_corner_info["bottom_right"],
+                        img_corner_info["bottom_left"]
+                        ], dtype=np.float32
+                    )
+                )
 
-    corners[0] = img_corner_info["top_left"]
-    corners[1] = img_corner_info["top_right"]
-    corners[2] = img_corner_info["bottom_right"]
-    corners[3] = img_corner_info["bottom_left"]
+        print(f"Loaded {len(parsed)} images")
+        return parsed
 
-    return corners
 
+def get_real_chessboard_corners(imgid: str):
+    return parsed[imgid][2]
+
+## METHODS
 
 def get_chessboard_corners1(image):
     img_height, img_width = image.shape[:2]
@@ -84,64 +97,31 @@ def get_chessboard_corners1(image):
     canny_threshold_1 = [25, 50, 100, 200, 300, 400]
     canny_threshold_2 = [50, 100, 200, 300, 400, 500]
     params = [x for x in itertools.product(canny_threshold_1, canny_threshold_2)]
-    corners_list = find_chessboard(gray_image, params, upsize_factor, scale_factor)
+    corners_list, _, _, _, _ = find_chessboard(gray_image, params, upsize_factor, scale_factor)
     return corners_list
 
 
-def get_chessboard_corners2(image):
+# def get_chessboard_corners2(image):
+#
+#     model = YOLO("models/board_localization.pt")
+#     res = model.predict(
+#         image,
+#         imgsz=640,
+#     )
+#
+#     return res[0].keypoints.xy.squeeze().cpu().numpy()
 
-    model = YOLO("models/board_localization.pt")
-    res = model.predict(
-        image,
-        imgsz=640,
-    )
+def get_chessboard_corners_topdown(image):
+    resized_image = cv2.resize(image, (1500, 1500))
+    _, corners_list, _, _, _, _, _, _, _, _ = local_temp.auto_chessboard_localization_alt(image, resized_image)
 
-    return res[0].keypoints.xy.squeeze().cpu().numpy()
+    # riporta in scala originale
+    if corners_list is None or len(corners_list) == 0:
+        return None
 
-def get_chessboard_cells(image, corners):
-
-    # change corners to top-left, top-right, bottom-left, bottom-right
-    src = np.float32([corners[0], corners[1], corners[3], corners[2]])
-
-    dest_width = 1200
-    dest_height = 1200
-    dest = np.float32(
-        [[0, 0], [dest_width, 0], [0, dest_height], [dest_width, dest_height]]
-    )
-
-    M = cv2.getPerspectiveTransform(src, dest)
-    warped_image = cv2.warpPerspective(image, M, (dest_width + 2, dest_height + 2))
-
-    # display_image_cv2(warped_image, "warped")
-
-    rows = 8
-    cols = 8
-    square_width = dest_width // cols
-    square_height = dest_height // rows
-
-    for i in range(rows):
-        for j in range(cols):
-            top_left = (j * square_width, i * square_height)
-            bottom_right = ((j + 1) * square_width, (i + 1) * square_height)
-            cv2.rectangle(warped_image, top_left, bottom_right, (0, 255, 0), 4)
-
-    display_image_cv2(warped_image, "grid")
-
-    # M_inv = cv2.invert(M)[1]
-
-    # TODO: return cells bounding boxes and center coordinates
-
-
-def detect_chess_pieces(file_path):
-    pass
-
-
-def find_chess_piece_cell(pieces, cells):
-    pass
-
-
-def find_similar_games(mapping):
-    pass
+    corners_list[:, 0] = (image.shape[0] / resized_image.shape[0]) * corners_list[:, 0]
+    corners_list[:, 1] = (image.shape[1] / resized_image.shape[1]) * corners_list[:, 1]
+    return corners_list
 
 
 def order_corners_clockwise(corners):
@@ -152,42 +132,33 @@ def order_corners_clockwise(corners):
     return corners[sorted_indices]
 
 
-def execute_pipeline(file_path):
-
+def execute_pipeline(file_path: str, imgid: str, func: Callable[[cv2.Mat], np.typing.ArrayLike], debug=False, th=30):
     image = cv2.imread(file_path)
-    # display_image_cv2(image, "image")
 
-    corners = get_real_chessboard_corners(file_path)
+    corners = get_real_chessboard_corners(imgid)
     sorted_corners = order_corners_clockwise(corners)
+    # sorted_corners = local_temp.sort_quadrilateral_approx(corners)
+    # sorted_corners = np.array(sorted_corners)
 
-    #predicted_corners = get_chessboard_corners1(image)
-    predicted_corners = get_chessboard_corners2(image)
-
+    predicted_corners = func(image)
+    if predicted_corners is None or len(predicted_corners) == 0:
+        predicted_corners = np.zeros((4,2), dtype=float)
     sorted_predicted_corners = order_corners_clockwise(predicted_corners)
+    # sorted_predicted_corners = local_temp.sort_quadrilateral_approx(predicted_corners)
+    # sorted_predicted_corners = np.array(sorted_predicted_corners)
 
     distances = np.linalg.norm(sorted_corners - sorted_predicted_corners, axis=1)
-    all_match = np.all(distances <= 10.0)
+    all_match = np.all(distances <= th) # entro 30 pixel é comunque funzionale al nostro scopo
 
-    for p in sorted_corners:
-        cv2.circle(image, (int(p[0]), int(p[1])), 30, (0, 255, 0), -1)
+    if debug:
+        for p in sorted_corners:
+            cv2.circle(image, (int(p[0]), int(p[1])), 30, (0, 255, 0), -1)
 
-    for p in sorted_predicted_corners:
-        cv2.circle(image, (int(p[0]), int(p[1])), 30, (0, 0, 255), -1)
-
-    display_image_cv2(image, "corners")
+        for p in sorted_predicted_corners:
+            cv2.circle(image, (int(p[0]), int(p[1])), 30, (0, 0, 255), -1)
+        display_image_cv2(image, file_path)
 
     return distances, all_match
-
-    # cells = get_chessboard_cells(image, corners)
-
-    # pieces = detect_chess_pieces(image)
-
-    # mapping = find_chess_piece_cell(pieces, cells)
-
-    # similar_games = find_similar_games(mapping)
-
-    # TODO: show in UI
-
 
 def get_next_image_in_folder(folder_path):
     rootdir = Path(folder_path)
@@ -197,28 +168,31 @@ def get_next_image_in_folder(folder_path):
 
 
 def main():
-    paths = get_next_image_in_folder("data/chessred2k/images")
-    count = 0
+    p = load_real_chessboard_corners(r"E:\projects\uni\Chessy3D\data\chessred\annotations.json")
+    base_path = r"E:/projects/uni/Chessy3D/data/chessred/"
+    debug = False
+    th = 30
+
     errors = 0
+    start = time.time()
+    with open("result.txt", "wt") as f:
+        for index, [imgid, info] in enumerate(p.items()):
+            start_iter = time.time()
+            path = base_path + info[1]
+            # distances, all_match = execute_pipeline(path, imgid, get_chessboard_corners1)
+            distances, all_match = execute_pipeline(path, imgid, get_chessboard_corners_topdown, debug=debug, th=th)
 
-    with open("results2.txt", "w") as f:
-        for index, next_path in enumerate(paths):
-            distances, all_match = execute_pipeline(str(next_path))
-            
-            '''
-            count = count + 1
-            f.write(
-                f"image path: {next_path}, distances: {distances}, match: {all_match}\n"
-            )
-
+            end_iter = time.time()
+            f.write(f"image path: {info[0]}, distances: {distances}, match: {all_match}, time: {end_iter - start_iter}\n")
             if not all_match:
                 errors = errors + 1
+            print(f"STEP {index} image path: {info[0]}, distances: {distances}, match: {all_match}, error: {errors/(index+1)}. time: {end_iter - start_iter}")
 
-            print(f"Step {index}")
+        end = time.time()
+        f.write(f"completed in {end - start} seconds")
 
-             '''
-
-    print(f"Completed: {errors} errors over {count} images -> accuracy: {count-errors/count}")
+    count = len(p)
+    print(f"Completed: {errors} errors over {count} images -> accuracy: {count-errors/count} - time: {end - start} seconds avg {(end - start)/count}")
 
 
 if __name__ == "__main__":
