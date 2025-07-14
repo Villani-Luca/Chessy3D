@@ -13,7 +13,6 @@ from chessboard_localization_temp.localization import (
     find_chessboard_squares,
 )
 import chessboard_localization_temp.main as local_temp
-import concurrent.futures
 
 ####################
 
@@ -175,7 +174,7 @@ def main():
 
     errors = 0
     start = time.time()
-    with open("result.txt", "wt") as f:
+    with open("topdown_results.txt", "wt") as f:
         for index, [imgid, info] in enumerate(p.items()):
             start_iter = time.time()
             path = base_path + info[1]
