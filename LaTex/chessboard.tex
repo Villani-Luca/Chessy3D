@@ -1,26 +1,55 @@
-Detecting a chessboard in an image involves identifying both the grid corners and the bounding boxes of all individual cells. Unlike standard calibration setups, where the chessboard is fully visible, our task required robustness to real-world conditions, including partial occlusions from chess pieces and inconsistent lighting. In these cases, lines and corners may not be clearly visible, making standard chessboard detection techniques unreliable. Over the course of this project, we evaluated a variety of techniques, refining our approach over time to improve accuracy and robustness. This section summarizes the main methods we explored, followed by a detailed description of the final solution adopted in our system.
-
+Detecting a chessboard in an image involves identifying both the grid corners and the bounding boxes of all individual cells.
+Unlike standard calibration setups, where the chessboard is fully visible, our task required robustness to real-world conditions, including partial occlusions from chess pieces and inconsistent lighting. 
+In these cases, lines and corners may not be clearly visible, making standard chessboard detection techniques unreliable. Over the course of this project, we evaluated a variety of techniques, 
+refining our approach over time to improve accuracy and robustness. 
+This section summarizes the main methods we explored, followed by a detailed description of the final solution adopted in our system.
+\newline
 \subsection{Line-Based Detection}
+This approach aims to reconstruct the chessboard grid starting from strong edges features. 
+After detecting line segments using the Hough Transform, we extend and merge them to improve continuity and reduce fragmentation. 
+The goal is to recover as much of the grid structure as possible, even when parts are occluded by chess pieces.
+\newline
+To reduce computational complexity and increase robustness, the detected lines are clustered into vertical-ish and horizontal-ish directions using \textit{k}-means based on their angles. 
+Intersections between these classified lines are then computed to identify potential quadrilateral shapes that correspond to individual chessboard cells. \ref{chessboard:linemethod:lines}
+\newline
+In the final stage, the algorithm searches for a regular 8x8 square pattern among the candidate quads. 
+If some cells are missing due to occlusions, their positions are inferred by extrapolating from nearby detected cells. 
+Once a complete grid is hypothesized, the enclosing quadrilateral is used to determine the overall chessboard corners. \ref{chessboard:linemethod:quads}
 
-This approach aims to reconstruct the chessboard grid starting from strong edges features. After detecting line segments using the Hough Transform, we extend and merge them to improve continuity and reduce fragmentation. The goal is to recover as much of the grid structure as possible, even when parts are occluded by chess pieces.
+% versione in cui le immagini sono messe insieme per facilitare il posizionamento
+%
+% \begin{figure}[ht]
+% \centering
+% %TODO: ho dovuto ridurre la grandezza delle immagini da 0.75 a 0.65 per farle "flottare" correttamente nella pagina da rivedere alla fine del file
+% \begin{subfigure}{0.65\linewidth}
+%   \includegraphics[width=\linewidth]{chessboard/line_method1.jpg}
+%   \caption{Line detection and clustering}
+%   \label{chessboard:linemethod:lines}
+% \end{subfigure}
+% \begin{subfigure}{0.65\linewidth}
+%   \includegraphics[width=\linewidth]{chessboard/line_method2.jpg}
+%   \caption{Quads retrieved from the line intersections}
+%   \label{chessboard:linemethod:quads}
+% \end{subfigure}
+% \caption{Line-Based detection}
+% \end{figure}
 
-To reduce computational complexity and increase robustness, the detected lines are clustered into vertical-ish and horizontal-ish directions using \textit{k}-means based on their angles. Intersections between these classified lines are then computed to identify potential quadrilateral shapes that correspond to individual chessboard cells.
-
-In the final stage, the algorithm searches for a regular 8x8 square pattern among the candidate quads. If some cells are missing due to occlusions, their positions are inferred by extrapolating from nearby detected cells. Once a complete grid is hypothesized, the enclosing quadrilateral is used to determine the overall chessboard corners.
-
-\begin{figure}[H]
+% %TODO: ho dovuto ridurre la grandezza delle immagini da 0.75 a 0.65 per farle "flottare" correttamente nella pagina da rivedere alla fine del file
+\begin{figure}[ht]
 \centering
-\includegraphics[width=0.75\linewidth]{chessboard/line_method1.jpg}
+\includegraphics[width=0.65\linewidth]{chessboard/line_method1.jpg}
 \caption{Line detection and clustering}
+\label{chessboard:linemethod:lines}
 \end{figure}
 
-\begin{figure}[H]
+\begin{figure}[h]
 \centering
-\includegraphics[width=0.75\linewidth]{chessboard/line_method2.jpg}
+\includegraphics[width=0.65\linewidth]{chessboard/line_method2.jpg}
 \caption{Quads retrieved from the line intersections}
+\label{chessboard:linemethod:quads}
 \end{figure}
 
-
+\noindent
 \textbf{Limitations:}
 \begin{itemize}
   \item Sensitive to noise and small edge artifacts.
@@ -30,13 +59,16 @@ In the final stage, the algorithm searches for a regular 8x8 square pattern amon
 \end{itemize}
 
 \subsection{Contour-Based Detection}
-
-This approach begins by detecting contours in the image rather than lines. The contours are approximated to polygons with fewer vertices to simplify their shapes. The polygons are then filtered based on the number of vertices (specifically looking for quadrilaterals) and their areas, aiming to identify candidate quads that correspond to chessboard cells. 
-
-Once candidate quadrilaterals are identified, we compute the smallest enclosing quadrilateral that contains all these candidate cells. This enclosing quad serves as the estimated chessboard boundary.
-
+This approach begins by detecting contours in the image rather than lines. 
+The contours are approximated to polygons with fewer vertices to simplify their shapes. 
+The polygons are then filtered based on the number of vertices (specifically looking for quadrilaterals) and their areas, 
+aiming to identify candidate quads that correspond to chessboard cells. 
+\newline
+Once candidate quadrilaterals are identified, we compute the smallest enclosing quadrilateral that contains all these candidate cells. 
+This enclosing quad serves as the estimated chessboard boundary.
+\newline
 The cells' bounding boxes are then calculated by applying a homography transformation to the image using the chessboard corners and splitting the image into a regular 8x8 grid. This allows the algorithm to fill gaps when some cells are not directly detected.
-
+\newline
 \textbf{Limitations:}
 \begin{itemize}
   \item Needs careful tuning to keep only meaningful shapes.
@@ -46,23 +78,24 @@ The cells' bounding boxes are then calculated by applying a homography transform
 \end{itemize}
 
 \subsection{Parallel Multi-Parameter Contour-Based Detection}
-
-This is a variant of the Contour-Based approach where instead of using fixed parameters, a range of thresholds is tried by running multiple pipelines in parallel. Each configuration applies different Canny and Hough parameter settings, and the one that produces the highest number of valid squares is selected as the best candidate.
+This is a variant of the Contour-Based approach where instead of using fixed parameters, a range of thresholds is tried by running multiple pipelines in parallel. 
+Each configuration applies different Canny and Hough parameter settings, and the one that produces the highest number of valid squares is selected as the best candidate.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.75\linewidth]{chessboard/parallel_1.jpg}
 \caption{Thresholding and Canny parameters exploration}
+\label{chessboard:parallel:canny:exploration}
 \end{figure}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.75\linewidth]{chessboard/parallel_2.jpg}
 \caption{Hough parameters exploration}
+\label{chessboard:parallel:hough:exploration}
 \end{figure}
 
-
-
+\noindent
 \textbf{Limitations:}
 \begin{itemize}
   \item Increased computational cost due to running multiple Canny and Hough parameter sets in parallel.
@@ -72,25 +105,27 @@ This is a variant of the Contour-Based approach where instead of using fixed par
 \end{itemize}
 
 \subsection{Deep Learning Corner Keypoint Detection}
+Instead of using classical computer vision techniques, this approach uses a fine-tuned YOLOv11 pose estimation model to directly detect the four chessboard corners as keypoints. 
+While the model achieved good quantitative metrics, the predicted keypoint locations were not always precise enough for reliable use. 
+\newline
+The model was trained on the ChessRed2K dataset, which provides annotated corner positions for supervision. 
+The main drawback was that the model failed to generalize to other images outside the dataset, often not detecting any corners at all. 
+Likely, a larger and more diverse training set would be needed to make this solution viable.
 
-Instead of using classical computer vision techniques, this approach uses a fine-tuned YOLOv11 pose estimation model to directly detect the four chessboard corners as keypoints. While the model achieved good quantitative metrics, the predicted keypoint locations were not always precise enough for reliable use. 
-
-The model was trained on the ChessRed2K dataset, which provides annotated corner positions for supervision. The main drawback was that the model failed to generalize to other images outside the dataset, often not detecting any corners at all. Likely, a larger and more diverse training set would be needed to make this solution viable.
-
-\begin{figure}[H]
+\begin{figure}[ht]
 \centering
 \includegraphics[width=0.75\linewidth]{chessboard/ml_keypoint_1.jpg}
 \caption{Good prediction}
 \end{figure}
 
 
-\begin{figure}[H]
+\begin{figure}[ht]
 \centering
 \includegraphics[width=0.75\linewidth]{chessboard/ml_keypoint_2.jpg}
 \caption{Inaccurate prediction}
 \end{figure}
 
-
+\noindent
 \textbf{Limitations:}
 \begin{itemize}
   \item Limited generalization beyond the specific training dataset.
@@ -101,11 +136,14 @@ The model was trained on the ChessRed2K dataset, which provides annotated corner
 \end{itemize}
 
 \subsection{Top-Down Contour-Based Chessboard Detection (Chosen approach)}
-
-This was the final chosen approach. This method is contour-based but follows a top-down strategy rather than building up from detected edges. It assumes the chessboard is fully visible within the image, roughly centered, and occupies a significant portion of the frame. The approach starts by identifying the largest quadrilateral contours in the image, which serve as candidate chessboards.
-
-For each candidate, a projection is applied to straighten the quadrilateral region. Then, two morphological filters are applied separately to isolate vertical and horizontal lines, effectively removing non-grid elements such as chess pieces. With this cleaned-up candidate, the Hough transform is used to detect grid lines, and the pipeline continues similarly to the contour-based detection approach to extract the grid and corners.
-
+This was the final chosen approach. This method is contour-based but follows a top-down strategy rather than building up from detected edges. 
+It assumes the chessboard is fully visible within the image, roughly centered, and occupies a significant portion of the frame. 
+The approach starts by identifying the largest quadrilateral contours in the image, which serve as candidate chessboards.
+\newline
+For each candidate, a projection is applied to straighten the quadrilateral region. 
+Then, two morphological filters are applied separately to isolate vertical and horizontal lines, effectively removing non-grid elements such as chess pieces. 
+With this cleaned-up candidate, the Hough transform is used to detect grid lines, and the pipeline continues similarly to the contour-based detection approach to extract the grid and corners.
+\newline
 \textbf{Detailed Step-by-Step Process}
 \begin{itemize}
     \item \textbf{Grayscale Conversion}: Convert the input image to grayscale.
