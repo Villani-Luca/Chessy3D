@@ -178,10 +178,16 @@ With this cleaned-up candidate, the Hough transform is used to detect grid lines
   \item Less effective in cluttered scenes with multiple large quadrilaterals.
 \end{itemize}
 
-% per formattare la pagina in cima alla colonna a destra
-\pagebreak
+\subsection{Method comparison}
+To have an objective measure of performance between methods we defined two usefull metrics:
+\begin{enumerate}
+  \item \textbf{Average time}: average time that is needed to compute the corners given an image
+  \item \textbf{Accuracy}: a detection is accurate if all detected corners land no more than 30 pixels from the ground truth.
+\end{enumerate}
+Having defined the metrics, by utilizing chessred2k dataset \cite{cpd:dataset:chessred2k}, containing 2078 labeled images we were able to 
+compute a benchmark of the proposed methods. (run on intel i7-10700K CPU, RAM 32GB, RTX 2080 SUPER).
 
-\begin{table}[hb]
+\begin{table}[ht]
 \centering
 \caption{Performance comparison of the proposed methods on chessred2k dataset \cite{cpd:dataset:chessred2k}.}
 \label{chessboard:table:comparison}
