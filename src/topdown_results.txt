@@ -2077,4 +2077,5 @@ image path: G099_IMG097.jpg, distances: [     2.9042      11.151      2.7608    
 image path: G099_IMG098.jpg, distances: [     8.3316      3.5389      3.4114     0.89441], match: True, time: 0.3595290184020996
 image path: G099_IMG099.jpg, distances: [     2.6545      7.6929      119.31      109.05], match: False, time: 0.21575212478637695
 
+
 Completed: 163 errors over 2078 images -> accuracy: 0.07844080846968 - time: 648.7789218425751 seconds avg 0.31221314814368384

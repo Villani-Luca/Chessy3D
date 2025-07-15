@@ -177,3 +177,20 @@ With this cleaned-up candidate, the Hough transform is used to detect grid lines
   \item Sensitive to contour detection errors—largest quadrilateral might not be the board.
   \item Less effective in cluttered scenes with multiple large quadrilaterals.
 \end{itemize}
+
+% per formattare la pagina in cima alla colonna a destra
+\pagebreak
+
+\begin{table}[hb]
+\centering
+\caption{Performance comparison of the proposed methods on chessred2k dataset \cite{cpd:dataset:chessred2k}.}
+\label{chessboard:table:comparison}
+\begin{tabular}{lcc}
+\textbf{Method} & \textbf{Average time} & \textbf{Accuracy} \\
+Line detection and clustering &  &  \\
+Contour-Based & &  \\
+Parallel Multi-Parameter Contour-Based & $\sim$5.154s & 90,91\% \\
+Deep Learning Corner Keypoint &  &  \\
+Top-Down Contour-Based Chessboard & $\sim$0.312s & 92.16\% \\
+\end{tabular}
+\end{table}
