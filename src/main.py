@@ -8,11 +8,13 @@ import cv2
 import pyautogui
 import itertools
 from ultralytics import YOLO
-from chessboard_localization_temp.localization import (
-    find_chessboard,
-    find_chessboard_squares,
-)
-import chessboard_localization_temp.main as local_temp
+import math
+
+#from chessboard_localization_temp.localization import (
+#    find_chessboard,
+#    find_chessboard_squares,
+#)
+#import chessboard_localization_temp.main as local_temp
 
 ####################
 
@@ -100,15 +102,13 @@ def get_chessboard_corners1(image):
     return corners_list
 
 
-# def get_chessboard_corners2(image):
-#
-#     model = YOLO("models/board_localization.pt")
-#     res = model.predict(
-#         image,
-#         imgsz=640,
-#     )
-#
-#     return res[0].keypoints.xy.squeeze().cpu().numpy()
+def get_chessboard_corners2(image):
+    model = YOLO("models/board_localization.pt")
+    res = model.predict(
+        image,
+        imgsz=640,
+    )
+    return res[0].keypoints.xy.squeeze().cpu().numpy()
 
 def get_chessboard_corners_topdown(image):
     resized_image = cv2.resize(image, (1500, 1500))
@@ -166,20 +166,219 @@ def get_next_image_in_folder(folder_path):
         yield file_path
 
 
+def contour_based(image):
+    # read image and convert it to different color spaces 
+    gray_image=cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)
+
+    original_size = 1000
+    scale_factor = image.shape[0] / original_size
+
+    ## Processing Image  -->  OTSU Threshold , Canny edge detection , dilate , HoughLinesP 
+
+    # OTSU threshold
+    ret, otsu_binary = cv2.threshold(gray_image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+    # Canny edge detection
+    canny_image = cv2.Canny(otsu_binary, 20, 255)
+
+    # Dilation
+    kernel = np.ones((7, 7), np.uint8)  
+    dilation_image = cv2.dilate(canny_image, kernel, iterations=1)
+
+    # Hough Lines
+    lines = cv2.HoughLinesP(dilation_image, 1, np.pi / 180, threshold=500, minLineLength=150, maxLineGap=100)
+
+
+    # Create an image that contains only black pixels
+    black_image = np.zeros_like(dilation_image)
+
+    # Draw only lines that are output of HoughLinesP function to the "black_image"
+    if lines is not None:
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            # draw only lines to the "black_image"
+            cv2.line(black_image, (x1, y1), (x2, y2), (255, 255, 255), 2)
+
+    # Dilation
+    kernel = np.ones((3, 3), np.uint8)
+    black_image = cv2.dilate(black_image, kernel, iterations=1)
+
+    # Look for valid squares and check if squares are inside of board
+
+    # find contours
+    board_contours, hierarchy = cv2.findContours(black_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    # blank image for displaying all contours
+    #all_contours_image= np.zeros_like(black_image)
+
+    # Copy blank image for displaying all squares 
+    #squares_image = np.copy(image) 
+
+    # blank image for displaying valid contours (squares)
+    valid_squares_image = np.zeros_like(black_image)
+
+    
+
+    # loop through contours and filter them by deciding if they are potential squares
+    for contour in board_contours:
+        if scale_factor * 2000 < cv2.contourArea(contour) < scale_factor * 20000:
+
+            # Approximate the contour to a simpler shape
+            epsilon = 0.02 * cv2.arcLength(contour, True)
+            approx = cv2.approxPolyDP(contour, epsilon, True)
+            
+            # if polygon has 4 vertices
+            if len(approx) == 4:
+
+                # 4 points of polygon
+                pts = [pt[0].tolist() for pt in approx]
+
+                # create same pattern for points , bottomright(1) , topright(2) , topleft(3) , bottomleft(4)
+                index_sorted = sorted(pts, key=lambda x: x[0], reverse=True)
+
+                #  Y values
+                if index_sorted[0][1]< index_sorted[1][1]:
+                    cur=index_sorted[0]
+                    index_sorted[0] =  index_sorted[1]
+                    index_sorted[1] = cur
+
+                if index_sorted[2][1]> index_sorted[3][1]:
+                    cur=index_sorted[2]
+                    index_sorted[2] =  index_sorted[3]
+                    index_sorted[3] = cur
+
+                # bottomright(1) , topright(2) , topleft(3) , bottomleft(4)
+                pt1=index_sorted[0]
+                pt2=index_sorted[1]
+                pt3=index_sorted[2]
+                pt4=index_sorted[3]
+
+                # find rectangle that fits 4 point 
+                x, y, w, h = cv2.boundingRect(contour)
+                # find center of rectangle 
+                center_x=(x+(x+w))/2
+                center_y=(y+(y+h))/2
+
+                
+
+                # calculate length of 4 side of rectangle
+                l1 = math.sqrt((pt1[0] - pt2[0])**2 + (pt1[1] - pt2[1])**2)
+                l2 = math.sqrt((pt2[0] - pt3[0])**2 + (pt2[1] - pt3[1])**2)
+                l3 = math.sqrt((pt3[0] - pt4[0])**2 + (pt3[1] - pt4[1])**2)
+                l4 = math.sqrt((pt1[0] - pt4[0])**2 + (pt1[1] - pt4[1])**2)
+    
+    
+                # Create a list of lengths
+                lengths = [l1, l2, l3, l4]
+                
+                # Get the maximum and minimum lengths
+                max_length = max(lengths)
+                min_length = min(lengths)
+
+                # Check if this length values are suitable for a square , this threshold value plays crucial role for squares ,  
+                if (max_length - min_length) <= scale_factor * 35 : # 20 for smaller boards  , 50 for bigger , 35 works most of the time 
+                    valid_square=True
+                else:
+                    valid_square=False
+    
+                if valid_square:
+
+                    # Draw the lines between the points
+                    #cv2.line(squares_image, pt1, pt2, (255, 255, 0), 7)
+                    #cv2.line(squares_image, pt2, pt3, (255, 255, 0), 7)
+                    #cv2.line(squares_image, pt3, pt4, (255, 255, 0), 7)
+                    #cv2.line(squares_image, pt1, pt4, (255, 255, 0), 7)
+
+                    # Draw only valid squares to "valid_squares_image"
+                    cv2.line(valid_squares_image, pt1, pt2, (255, 255, 0), 7)
+                    cv2.line(valid_squares_image, pt2, pt3, (255, 255, 0), 7)
+                    cv2.line(valid_squares_image, pt3, pt4, (255, 255, 0), 7)
+                    cv2.line(valid_squares_image, pt1, pt4, (255, 255, 0), 7)
+                
+                # Draw only valid squares to "valid_squares_image"
+                #cv2.line(all_contours_image, pt1, pt2, (255, 255, 0), 7)
+                #cv2.line(all_contours_image, pt2, pt3, (255, 255, 0), 7)
+                #cv2.line(all_contours_image, pt3, pt4, (255, 255, 0), 7)
+                #cv2.line(all_contours_image, pt1, pt4, (255, 255, 0), 7)
+            
+
+    #### Dilation to the image that contains only valid squares (gemoetrically valid)
+
+    # Apply dilation to the valid_squares_image
+    kernel = np.ones((7, 7), np.uint8)
+    dilated_valid_squares_image = cv2.dilate(valid_squares_image, kernel, iterations=1)
+
+
+    #### Find biggest contour of image 
+
+    # Find contours of dilated_valid_squares_image
+    contours, _ = cv2.findContours(dilated_valid_squares_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # take biggest contour 
+    largest_contour = max(contours, key=cv2.contourArea)
+
+    # create black image
+    #biggest_area_image = np.zeros_like(dilated_valid_squares_image)
+
+    # draw biggest contour to the image
+    #cv2.drawContours(biggest_area_image,largest_contour,-1,(255,255,255),10)
+
+    #### Find 4 extreme point of chess board
+
+    # Initialize variables to store extreme points
+    top_left = None
+    top_right = None
+    bottom_left = None
+    bottom_right = None
+
+    # Loop through the contour to find extreme points
+    for point in largest_contour[:, 0]:
+        x, y = point
+
+        if top_left is None or (x + y < top_left[0] + top_left[1]):
+            top_left = (x, y)
+
+        if top_right is None or (x - y > top_right[0] - top_right[1]):
+            top_right = (x, y)
+
+        if bottom_left is None or (x - y < bottom_left[0] - bottom_left[1]):
+            bottom_left = (x, y)
+
+        if bottom_right is None or (x + y > bottom_right[0] + bottom_right[1]):
+            bottom_right = (x, y)
+
+    # Draw the contour and the extreme points
+    #extreme_points_image = np.zeros_like(dilated_valid_squares_image, dtype=np.uint8)
+    #extreme_points_image = image
+    #cv2.drawContours(extreme_points_image, [largest_contour], -1, (255, 255, 255), thickness=2)
+
+    # Mark the extreme points
+    # Mark the extreme points
+    #cv2.circle(extreme_points_image, top_left, 15, (255, 0, 255), -1)  # red for top-left
+    #cv2.circle(extreme_points_image, top_right, 15, (255, 0, 255), -1)  # green for top-right
+    #cv2.circle(extreme_points_image, bottom_left, 15, (255, 0,255), -1)  # blue for bottom-left
+    #cv2.circle(extreme_points_image, bottom_right, 15, (255, 0, 255), -1)  # yellow for bottom-right
+
+    #display_image_cv2(extreme_points_image, window_name="test")
+
+    return np.array([top_left, top_right, bottom_right, bottom_left])
+
 def main():
-    p = load_real_chessboard_corners(r"E:\projects\uni\Chessy3D\data\chessred\annotations.json")
-    base_path = r"E:/projects/uni/Chessy3D/data/chessred/"
+
+    p = load_real_chessboard_corners(r"D:\workspace\Chessy3D\data\chessred2k\annotations.json")
+    base_path = r"D:\\workspace\\Chessy3D\\data\\chessred2k\\"
     debug = False
     th = 30
 
     errors = 0
     start = time.time()
-    with open("topdown_results.txt", "wt") as f:
+    with open("deep_learning_method.txt", "wt") as f:
         for index, [imgid, info] in enumerate(p.items()):
             start_iter = time.time()
             path = base_path + info[1]
+            distances, all_match = execute_pipeline(path, imgid, contour_based)
             # distances, all_match = execute_pipeline(path, imgid, get_chessboard_corners1)
-            distances, all_match = execute_pipeline(path, imgid, get_chessboard_corners_topdown, debug=debug, th=th)
+            #distances, all_match = execute_pipeline(path, imgid, get_chessboard_corners_topdown, debug=debug, th=th)
 
             end_iter = time.time()
             f.write(f"image path: {info[0]}, distances: {distances}, match: {all_match}, time: {end_iter - start_iter}\n")
@@ -191,7 +390,7 @@ def main():
         f.write(f"completed in {end - start} seconds")
 
     count = len(p)
-    print(f"Completed: {errors} errors over {count} images -> accuracy: {count-errors/count} - time: {end - start} seconds avg {(end - start)/count}")
+    print(f"Completed: {errors} errors over {count} images -> accuracy: {(count-errors)/count} - time: {end - start} seconds avg {(end - start)/count}")
 
 
 if __name__ == "__main__":
