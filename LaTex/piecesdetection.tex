@@ -68,7 +68,7 @@ YOLOv8m Run 3 & $\sim$0.07 & $\sim$0.38 & $\sim$1.15 \\
 After the training runs, we used the best model from the third run of YOLOv8m for chess-piece object detection.
 We found out that the model has overfitted the training data, achieving very high precision and recall values on that dataset but not performing well on unseen data.
 
-After that we decided to find better dataset for training the model and start a training run from scratch.
+After that we decided to find better datasets for training the model and start a training run from scratch.
 We found out multiple datasets online on Roboflow in order to start multiple training runs and find the best model for chess-piece object detection.
 The datasets used for training YOLOv8m are summarized in table below.
 \begin{table}[ht]
@@ -89,6 +89,32 @@ After many training runs we found out that the best model was with the second da
 which was trained for 200 epochs with a batch size of 16 and image size of 640 and an initial learning rate set by the model.
 
 We used the YOLOv8m model, which is a medium-sized version of the YOLOv8 architecture, suitable for our chess-piece detection task.
+
+We tried to use that model but we could not achieve the desired results.
+Then after many researches on the web and on ultralytics documentation we found out that the model was not trained properly.
+We decided to use the YOLOv8m model with the following parameters:
+\begin{itemize}
+    \item Batch size: 32
+    \item Image size: 640
+    \item Initial learning rate: 0.01
+    \item Number of epochs: 1200
+    \item Patience: 100
+\end{itemize}
+
+We started the first traing with just one dataset, Chess Piece Detection \cite{cpd:dataset:chesspiecedetection}, which contains 14808 images of chess pieces in various conditions.
+After 600 epoches we achieve some good results, but not good enough for our task.
+We decided to merge all the datasets found online and start a new training run with the merged dataset.
+The merged dataset contains 53206 images of chess pieces in various conditions, which is a significant increase in the amount of training data compared to the previous runs.
+We trained the model for 1200 epochs with a batch size of 32 and an image size of 640.
+
+After 200 epochs we started to see some good results in the trainig process, with the loss function decreasing and the precision and recall values increasing even more than the previous runs.
+\begin{figure}[ht]
+\centering
+\includegraphics[width=1\linewidth]{detection/merged-dataset-runs.png}
+\caption{Training loss and metrics for the merged dataset (validation set).}
+\label{chessboard:linemethod:lines}
+\end{figure}
+
 
 In terms of loss behavior, we decided to use three different loss functions:
 \begin{itemize}
