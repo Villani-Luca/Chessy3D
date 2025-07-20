@@ -47,68 +47,20 @@
 \maketitle
 
 \begin{abstract}
-In this paper, we present a novel framework for chessboard corners detection
- and chess-pieces object detection. 
-Our approach tackles the significant challenges posed by the variability
- of the photos taken of the chessboard and sizes, color and differences of the chess pieces.
-We propose a new method for chessboard keypoint detection that utilizes a combination of
- deep learning and geometric constraints to accurately identify the keypoints on the chessboard
- and the squares within it.
-This method is robust to variations in lighting, angle, and chessboard designs,
-making it suitable for real-world applications.
+In this paper, we present a novel framework for chessboard corners detection and chess-pieces object detection. 
+Our approach tackles the significant challenges posed by the variability of the photos taken of the chessboard and sizes, 
+color and differences of the chess pieces.
+We propose a new method for chessboard keypoint detection that takes a geometric approach enhanced by the constraints 
+in the working domain to accurately identify the keypoints on the chessboard and the squares within it.
+This method is robust to variations in lighting, angle, and chessboard designs, making it suitable for real-world applications.
 Additionally, we developed a chess-piece object detection model that can accurately detect and classify chess pieces in various conditions.
-Our study delves into the intricacies of chessboard detection, addressing the challenges of different chessboard designs and piece variations.
-The proposed approach using YOLOv8 for chess-piece detection
- demonstrates superior performance in terms of accuracy and robustness compared to existing methods.
-We used two datasets for training and testing our models: ChessRed2K and another small dataset found on Roboflow.
-After the object detection we will propose a FEN annotation method for converting the chessboard state into a
- FEN (Forsyth-Edwards Notation) string, which is a standard notation for describing the state of a chess game.
-Additionally we show a method for retrieving similar images using one hot encoding
- and a similarity search algorithm.
+Our study delves into the intricacies of chessboard and piece detection, addressing the challenges of different chessboard designs.
+The proposed approach uses YOLOv11 for chess-piece detection enabling conversion from image to digital FEN annotation.
+Additionally we show a method for retrieving similar images using one hot encoding and a similarity search algorithm.
 \end{abstract}
 
 \section{Introduction}
-The detection and analysis of keypoints in images have
-become crucial tasks in the field of computer vision, with
-applications ranging from object recognition and tracking
-to augmented reality and autonomous driving.
-
-Identifying corners in images is a fundamental
-problem in computer vision, with applications in
-object recognition, image stitching, and 3D reconstruction.
-Chessboard detection is a specific case of keypoint detection
-that has gained significant attention due to its
-importance in camera calibration, pose estimation, and
-robotics. The chessboard pattern provides a regular and
-structured grid that can be easily detected and used to
-estimate the camera's intrinsic and extrinsic parameters.
-In this paper, we present an approach for chessboard corners detection
-and chess-pieces object detection using deep learning
-and geometric constraints. Our method is designed to
-handle the challenges posed by the variability of chessboard
-photos, including different lighting conditions, angles,
-and chessboard designs.
-
-We have been through a series of steps to achieve our goal:
-\begin{itemize}
-    \item We started with the chessboard corners detection, using a combination of deep learning and geometric constraints to accurately identify the keypoints on the chessboard.
-    \item We then moved on to chessboard squares detection, which involves detecting the individual squares on the chessboard.
-    \item Next, we focused on chess-pieces object detection, using YOLOv8 to detect and classify chess pieces in various conditions.
-    \item After that, we developed a FEN annotation method for converting the chessboard state into a FEN string.
-    \item Finally, we implemented an image similarity search method using one hot encoding and a similarity search algorithm.
-    \item We also conducted a series of experiments to evaluate the performance of our approach, comparing it with existing methods and demonstrating its effectiveness in real-world scenarios.
-\end{itemize}
-
-We used two datasets for training and testing our models: ChessRed2K and another small dataset found on Roboflow.
-The rest of the paper is organized as follows: 
-\begin{itemize}
-    \item Section II presents our proposed methods for detecting chessboard corners and cell boundaries.
-    \item Section III describes the chess piece detection pipeline using YOLOv8.
-    \item Section IV outlines the procedure for generating FEN annotations from board states.
-    \item Section V introduces the method for chess image similarity search.
-\end{itemize}
-
-
+\input{introduction.tex}
 
 \section{Chessboard Detection}
 \input{chessboard.tex}
