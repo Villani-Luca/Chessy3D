@@ -10,11 +10,11 @@ After detecting line segments using the Hough Transform, we extend and merge the
 The goal is to recover as much of the grid structure as possible, even when parts are occluded by chess pieces.
 \newline
 To reduce computational complexity and increase robustness, the detected lines are clustered into vertical-ish and horizontal-ish directions using \textit{k}-means based on their angles. 
-Intersections between these classified lines are then computed to identify potential quadrilateral shapes that correspond to individual chessboard cells. \ref{chessboard:linemethod:lines}
+Intersections between these classified lines are then computed to identify potential quadrilateral shapes that correspond to individual chessboard cells.
 \newline
 In the final stage, the algorithm searches for a regular 8x8 square pattern among the candidate quads. 
 If some cells are missing due to occlusions, their positions are inferred by extrapolating from nearby detected cells. 
-Once a complete grid is hypothesized, the enclosing quadrilateral is used to determine the overall chessboard corners. \ref{chessboard:linemethod:quads}
+Once a complete grid is hypothesized, the enclosing quadrilateral is used to determine the overall chessboard corners.
 
 % versione in cui le immagini sono messe insieme per facilitare il posizionamento
 %
@@ -193,10 +193,10 @@ compute a benchmark of the proposed methods. (run on intel i7-10700K CPU, RAM 32
 \label{chessboard:table:comparison}
 \begin{tabular}{lcc}
 \textbf{Method} & \textbf{Average time} & \textbf{Accuracy} \\
-Line detection and clustering &  &  \\
-Contour-Based & &  \\
-Parallel Multi-Parameter Contour-Based & $\sim$5.154s & 90,91\% \\
-Deep Learning Corner Keypoint &  &  \\
+Line detection and clustering & N/A & N/A \\
+Contour-Based & $\sim$0.46s & 24.06\% \\
+Parallel Multi-Parameter Contour-Based & $\sim$5.154s & 90.91\% \\
+Deep Learning Corner Keypoint & $\sim$0.013s & 45,04\% \\
 Top-Down Contour-Based Chessboard & $\sim$0.312s & 92.16\% \\
 \end{tabular}
 \end{table}
