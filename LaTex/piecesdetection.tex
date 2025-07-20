@@ -115,6 +115,24 @@ After 200 epochs we started to see some good results in the trainig process, wit
 \label{chessboard:linemethod:lines}
 \end{figure}
 
+We found out that near 700 epochs the model had a good checkpoint, it had an overall accuracy of 94\% when the chessboard was full of pieces.
+Instead of stopping the training we tried to let it continue for more epochs in order to understand if we could achieve better results even if the current one was the best at that moment.
+After 200 more epochs we saw that the training and the validation loss were still going down but after some test with that checkpoints we found out that the model overfitted.
+
+\begin{figure}[ht]
+\centering
+\includegraphics[width=1\linewidth]{detection/merged-dataset-800epochs.png}
+\caption{Training and Validation loss and metrics for the merged dataset.}
+\label{chessboard:linemethod:lines}
+\end{figure}
+
+If we have to take into account some metrics for the good checkpoint we could see that our precision-recall was pretty good.
+\begin{figure}[ht]
+\centering
+\includegraphics[width=1\linewidth]{detection/PR-final.png}
+\caption{Precision-Recall on merged dataset}
+\label{chessboard:linemethod:lines}
+\end{figure}
 
 In terms of loss behavior, we decided to use three different loss functions:
 \begin{itemize}
@@ -126,17 +144,23 @@ In terms of loss behavior, we decided to use three different loss functions:
 
 \begin{table}[ht]
 \centering
-\caption{Final loss values for the dataset: Chess Piece Detection. All values are approximate and taken at convergence}
+\caption{Final validation loss values for the merged dataset. All values are approximate and taken at convergence}
 \label{tab:yolov8-loss}
 \resizebox{\linewidth}{!}{%
 \begin{tabular}{lccc}
 \textbf{Run} & \textbf{Classification Loss (cls\_loss)} & \textbf{Box Loss (box\_loss)} & \textbf{DFL Loss (dfl\_loss)} \\
-CPD Run 1 - 150epochs & $\sim$0.29669 & $\sim$0.73001 & $\sim$0.93347 \\
-CPD Run 2 - 200epochs & $\sim$0.05 & $\sim$0.32 & $\sim$1.05 \\
-CPD Run 3 - 250epochs & $\sim$0.07 & $\sim$0.38 & $\sim$1.15 \\
+CPD Run 1 - 600epochs & $\sim$0.97525 & $\sim$0.31069 & $\sim$0.77366 \\
+Merged Dataset Run 1 - 600epochs & $\sim$0.84877 & $\sim$0.19713 & $\sim$0.44311 \\
+Merged Dataset Run 2 - 800+epochs & $\sim$0.8247 & $\sim$0.18167 & $\sim$0.39219 \\
 \end{tabular}
 }
 \end{table}
 
 Compared to earlier training runs and attempts with DETR that showed high loss values and poor convergence, YOLOv8m performed significantly better in terms of loss values and detection robustness.
 We decided to use the third run of YOLOv8m as our final model for chess-piece object detection, as it showed the best performance in terms of precision, recall, and mAP values.
+
+After getting our object detection done with the best checkpoint we could achieve we had to merge that information with our application.
+Easily speaking we have got 64 contours of the chessboard cells and the boxes given by the object detection.
+For every box we calculated a heuristic scaled point at 30px from the base of the box, after that we check if the calculated point could be found in one of the 64 contours.
+If the check is true we save the predicted class in the correct piece and color and put that piece in the correct position otherwise we check another point and so on.
+With this method we can reconstruct the digital chessboard state from the image given.
