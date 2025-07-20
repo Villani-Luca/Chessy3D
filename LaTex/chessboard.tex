@@ -16,24 +16,6 @@ In the final stage, the algorithm searches for a regular 8x8 square pattern amon
 If some cells are missing due to occlusions, their positions are inferred by extrapolating from nearby detected cells. 
 Once a complete grid is hypothesized, the enclosing quadrilateral is used to determine the overall chessboard corners.
 
-% versione in cui le immagini sono messe insieme per facilitare il posizionamento
-%
-% \begin{figure}[ht]
-% \centering
-% %TODO: ho dovuto ridurre la grandezza delle immagini da 0.75 a 0.65 per farle "flottare" correttamente nella pagina da rivedere alla fine del file
-% \begin{subfigure}{0.65\linewidth}
-%   \includegraphics[width=\linewidth]{chessboard/line_method1.jpg}
-%   \caption{Line detection and clustering}
-%   \label{chessboard:linemethod:lines}
-% \end{subfigure}
-% \begin{subfigure}{0.65\linewidth}
-%   \includegraphics[width=\linewidth]{chessboard/line_method2.jpg}
-%   \caption{Quads retrieved from the line intersections}
-%   \label{chessboard:linemethod:quads}
-% \end{subfigure}
-% \caption{Line-Based detection}
-% \end{figure}
-
 % %TODO: ho dovuto ridurre la grandezza delle immagini da 0.75 a 0.65 per farle "flottare" correttamente nella pagina da rivedere alla fine del file
 \begin{figure}[ht]
 \centering
@@ -147,29 +129,83 @@ With this cleaned-up candidate, the Hough transform is used to detect grid lines
 \textbf{Detailed Step-by-Step Process}
 \begin{itemize}
     \item \textbf{Grayscale Conversion}: Convert the input image to grayscale.
-    
     \item \textbf{Bilateral Filtering}: Apply a bilateral filter to reduce noise while preserving edge sharpness.
-    
-    \item \textbf{Canny Edge Detection}: Generate a binary edge map using the Canny edge detector.
-    
+    \item 
+    {
+      \textbf{Canny Edge Detection}: Generate a binary edge map using the Canny edge detector.
+      \begin{figure}[h]
+      \centering
+      \includegraphics[width=0.5\linewidth]{chessboard/topdown/2_cannyfull.png}
+      \caption{Canny edge operator}
+      \label{chessboard:topdown:canny}
+      \end{figure}
+    }
     \item \textbf{Finding Large Contours}: Search for contours with areas approximately 50 to 70 times the expected area of a single chessboard cell. This heuristic typically returns two or three candidate contours, one of which contains the entire chessboard. Note that these candidate contours are intentionally larger than the actual chessboard to ensure full coverage and avoid partial detections.
-    
     \item \textbf{Processing Each Candidate Contour}:
     \begin{itemize}
-        \item \textbf{Projection}: Apply a geometric projection to warp the contents within the candidate’s quadrilateral contour into a normalized, axis-aligned rectangle. This step aligns the chessboard so that most edges become vertical or horizontal.
+        \item 
+        {
+          \textbf{Projection}: Apply a geometric projection to warp the contents within the candidate’s quadrilateral contour into a normalized, axis-aligned rectangle. This step aligns the chessboard so that most edges become vertical or horizontal.  
+          \begin{figure}[h]
+          \centering
+          \includegraphics[width=0.5\linewidth]{chessboard/topdown/3_projected_canny.png}
+          \caption{Candidate canny projection}
+          \label{chessboard:topdown:cannyprojection}
+          \end{figure}
+        }
         
-        \item \textbf{Vertical and Horizontal Masking}: Use separate morphological kernels to isolate vertical and horizontal lines. This filtering reduces noise caused primarily by the rounded shapes of chess pieces, enhancing grid line clarity.
+        \item {
+          \textbf{Vertical and Horizontal Masking}: Use separate morphological kernels to isolate vertical and horizontal lines. This filtering reduces noise caused primarily by the rounded shapes of chess pieces, enhancing grid line clarity.
+          \begin{figure}[h]
+          \centering
+          \includegraphics[width=0.5\linewidth]{chessboard/topdown/4_mask.png}
+          \caption{Vertical and horizontal detected lines}
+          \label{chessboard:topdown:mask}
+          \end{figure}
+        }
+        \item {
+          \textbf{Line Extension and Cleanup}: Perform a Probabilistic Hough Line Transform to detect and extend lines that are at least 80\% the length of a single chessboard square and fill gaps up to 50\% of the expected square length. This generates a clean grid representation of the projected chessboard.
+          \begin{figure}[H]
+          \centering
+          \includegraphics[width=0.5\linewidth]{chessboard/topdown/5_hough.png}
+          \caption{Mask cleanup}
+          \label{chessboard:topdown:hough}
+          \end{figure}
+        }
+        \item {
+          \textbf{Square Extraction}: Detect contours on the cleaned image and filter them strictly to identify squares that correspond to individual chessboard cells.
+          \begin{figure}[h]
+          \centering
+          \includegraphics[width=0.5\linewidth]{chessboard/topdown/6_squares.png}
+          \caption{Mask cleanup}
+          \label{chessboard:topdown:squares}
+          \end{figure}
+        }
+
+        \item {
+          \textbf{Contour and Corner Extraction}: Extract the largest contour that encloses all detected squares and approximate it to a quadrilateral to estimate the chessboard boundary. Among multiple candidates, select the one with the highest number of detected squares and best centrality within the image.
+          % \begin{figure}[h]
+          % \centering
+          % \includegraphics[width=0.5\linewidth]{chessboard/topdown/7_contour.png}
+          % \caption{Projected contour}
+          % \label{chessboard:topdown:contour}
+          % \end{figure}
+        }
         
-        \item \textbf{Line Extension and Cleanup}: Perform a Probabilistic Hough Line Transform to detect and extend lines that are at least 80\% the length of a single chessboard square and fill gaps up to 50\% of the expected square length. This generates a clean grid representation of the projected chessboard.
-        
-        \item \textbf{Square Extraction}: Detect contours on the cleaned image and filter them strictly to identify squares that correspond to individual chessboard cells.
-        
-        \item \textbf{Contour and Corner Extraction}: Extract the largest contour that encloses all detected squares and approximate it to a quadrilateral to estimate the chessboard boundary. Among multiple candidates, select the one with the highest number of detected squares and best centrality within the image.
     \end{itemize}
     
-    \item \textbf{Mapping the Chessboard Grid}: With the estimated corners, divide the quadrilateral into a regular 8x8 grid. This grid defines the bounding boxes of all chessboard cells, which are used in subsequent steps such as chess piece detection and recognition.
+    \item {
+      \textbf{Mapping the Chessboard Grid}: With the estimated corners, divide the quadrilateral into a regular 8x8 grid. This grid defines the bounding boxes of all chessboard cells, which are used in subsequent steps such as chess piece detection and recognition.
+      \begin{figure}[H]
+      \centering
+      \includegraphics[width=0.5\linewidth]{chessboard/topdown/8_final.png}
+      \caption{Projection to original image}
+      \label{chessboard:topdown:final}
+      \end{figure}
+    }
 \end{itemize}
 
+\pagebreak
 \textbf{Limitations:}
 \begin{itemize}
   \item Relies on strong assumptions: chessboard must be fully visible and centered.

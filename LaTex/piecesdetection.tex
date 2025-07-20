@@ -112,7 +112,7 @@ After 200 epochs we started to see some good results in the trainig process, wit
 \centering
 \includegraphics[width=1\linewidth]{detection/merged-dataset-runs.png}
 \caption{Training loss and metrics for the merged dataset (validation set).}
-\label{chessboard:linemethod:lines}
+\label{piecesdetection:training:merged}
 \end{figure}
 
 We found out that near 700 epochs the model had a good checkpoint, it had an overall accuracy of 94\% when the chessboard was full of pieces.
@@ -123,7 +123,7 @@ After 200 more epochs we saw that the training and the validation loss were stil
 \centering
 \includegraphics[width=1\linewidth]{detection/merged-dataset-800epochs.png}
 \caption{Training and Validation loss and metrics for the merged dataset.}
-\label{chessboard:linemethod:lines}
+\label{piecesdetection:training:800epochs}
 \end{figure}
 
 If we have to take into account some metrics for the good checkpoint we could see that our precision-recall was pretty good.
@@ -131,7 +131,7 @@ If we have to take into account some metrics for the good checkpoint we could se
 \centering
 \includegraphics[width=1\linewidth]{detection/PR-final.png}
 \caption{Precision-Recall on merged dataset}
-\label{chessboard:linemethod:lines}
+\label{piecesdetection:training:PR-final}
 \end{figure}
 
 In terms of loss behavior, we decided to use three different loss functions:
@@ -145,7 +145,7 @@ In terms of loss behavior, we decided to use three different loss functions:
 \begin{table}[ht]
 \centering
 \caption{Final validation loss values for the merged dataset. All values are approximate and taken at convergence}
-\label{tab:yolov8-loss}
+\label{tab:yolov8-loss:final}
 \resizebox{\linewidth}{!}{%
 \begin{tabular}{lccc}
 \textbf{Run} & \textbf{Classification Loss (cls\_loss)} & \textbf{Box Loss (box\_loss)} & \textbf{DFL Loss (dfl\_loss)} \\

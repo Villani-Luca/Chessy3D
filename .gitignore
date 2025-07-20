@@ -47,3 +47,5 @@ LaTex/main.bbl
 LaTex/main.fdb_latexmk
 LaTex/main.fls
 LaTex/main.log
+src/object_detection_yolo/classification/chess_classification/
+runs/
