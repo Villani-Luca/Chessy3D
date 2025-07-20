@@ -2,10 +2,29 @@ import json
 import shutil
 from pathlib import Path
 
+convert_to_rf = {
+    '0': '3',
+    '1': '5',
+    '2': '2',
+    '3': '0',
+    '4': '4',
+    '5': '1',
+    '6': '9',
+    '7': '11',
+    '8': '8',
+    '9': '6',
+    '10': '10',
+    '11': '7',
+    '12': '12'
+}
+
 def __calculate_bbox_for_pieces(bbox, img_w, img_h):
+    x_min, y_min, w, h = bbox
+    x_center = x_min + w / 2
+    y_center = y_min + h / 2
     yolo_bbox = [
-        bbox[0] / img_w,   # x_center
-        bbox[1] / img_h,   # y_center
+        x_center / img_w,   # x_center
+        y_center / img_h,   # y_center
         bbox[2] / img_w,   # width
         bbox[3] / img_h    # height
     ]
@@ -58,6 +77,7 @@ def convert_chessred2k_dataset_pieces(src_dataset_path, dest_dataset_path):
                 for annotation in pieces_annotations:
 
                     piece_class = annotation["category_id"]
+                    piece_class = convert_to_rf[str(piece_class)]
 
                     bbox_norm = __calculate_bbox_for_pieces(
                         annotation["bbox"], img_w, img_h
@@ -169,8 +189,8 @@ def convert_chessred2k_dataset_corners(src_dataset_path, dest_dataset_path):
                     f_txt.write(" ".join(map(str, line)) + "\n")
 
 if __name__ == "__main__":
-    chessred2k_path = "data/chessred2k"
+    chessred2k_path = r"D:\CodeProjects\University\Chessy3d\Chessy3D\data\chessred2k"
     board_localization_path = "data/board_localization"
     #convert_chessred2k_dataset_corners(chessred2k_path, board_localization_path)
 
-    convert_chessred2k_dataset_pieces("data/chessred2k", "data/pieces_detection")
+    convert_chessred2k_dataset_pieces(r"D:\CodeProjects\University\Chessy3d\Chessy3D\data\chessred2k", r"D:\CodeProjects\University\Chessy3d\Chessy3D\data\pieces_detection2")
