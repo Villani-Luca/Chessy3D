@@ -1,3 +1,7 @@
+Our approach in the object detection has been a global one.
+We choose to use a global approach in order to not segment every image in single pieces.
+In this way we could avoid having the empty class and the duplication of object detected that could have been present thanks to the duplication of the piece due to overlaps created during the image extraction (cropping) process
+
 We initially approached the problem of chess-pieces object detection using DETR (Detection Transformer), with a ResNet-50 backbone, used for object detection tasks.
 The DETR model was pre-trained on the COCO dataset and fine-tuned on a custom dataset of 2000 chess images, which included various chess pieces in different lighting conditions,
  angles, and designs annotated in the COCO format with 12 classes representing the different chess pieces (e.g., white-pawn, white-knight, white-bishop, etc.).
