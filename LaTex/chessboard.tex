@@ -81,7 +81,7 @@ Each configuration applies different Canny and Hough parameter settings, and the
 \textbf{Limitations:}
 \begin{itemize}
   \item Increased computational cost due to running multiple Canny and Hough parameter sets in parallel.
-  \item Risk of false positives if no parameter combination perfectly matches the image.
+  \item Risk of false positives if no parameter combination perfectly match the image.
   \item Requires a clear metric to select the optimal parameter set.
   \item Adds complexity in implementation and tuning compared to fixed-parameter methods.
 \end{itemize}
@@ -215,7 +215,7 @@ With this cleaned-up candidate, the Hough transform is used to detect grid lines
 \end{itemize}
 
 \subsection{Method comparison}
-To have an objective measure of performance between methods we defined two usefull metrics:
+To have an objective measure of performance between methods we defined two useful metrics:
 \begin{enumerate}
   \item \textbf{Average time}: average time that is needed to compute the corners given an image
   \item \textbf{Accuracy}: a detection is accurate if all detected corners land no more than 30 pixels from the ground truth.
