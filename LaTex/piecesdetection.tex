@@ -1,7 +1,7 @@
 Our approach in the object detection has been a global one.
 We choose to use a global approach in order to not segment every image in single pieces.
 In this way we could avoid having the empty class and the duplication of object detected that could have been present thanks to the duplication of the piece due to overlaps created during the image extraction (cropping) process
-
+\newline
 We initially approached the problem of chess-pieces object detection using DETR (Detection Transformer), with a ResNet-50 backbone, used for object detection tasks.
 The DETR model was pre-trained on the COCO dataset and fine-tuned on a custom dataset of 2000 chess images, which included various chess pieces in different lighting conditions,
  angles, and designs annotated in the COCO format with 12 classes representing the different chess pieces (e.g., white-pawn, white-knight, white-bishop, etc.).
@@ -10,12 +10,12 @@ Despite tuning and training the model for 100, 150 and 200 epoch, DETR consisten
 The DETR model struggled with the variability of chess pieces in different lighting conditions, angles, and designs, leading to suboptimal detection results.
 We found out that the model was not able to converge properly, and the loss function did not decrease as expected during training.
 This led us to explore alternative approaches for chess-piece object detection.
-
+\newline
 We then turned our attention to YOLOv8, a state-of-the-art object detection model that has shown promising results in various applications.
 We trained YOLOv8 on the same custom dataset of 2000 chess images, which included various chess pieces in different lighting conditions, angles, and designs.
 The training process was more successful with YOLOv8, as the model was able to converge properly and achieve a lower loss function.
 The YOLOv8 model demonstrated superior performance in terms of accuracy and robustness compared to DETR.
-
+\newline
 The model was trained from a pre-trained checkpoint found online and fine-tuned on our custom dataset.[ref to github repo]
 We conducted three training runs with different parameters like:
 \begin{itemize}
@@ -24,7 +24,7 @@ We conducted three training runs with different parameters like:
     \item Horizontal and vertical flips
 \end{itemize}
 The training was performed using PyTorch 2.1 on an NVIDIA RTX 3090 GPU with 24GB of VRAM.
-
+\newline
 It has been a difficult task to train the model in the right way.
 We tried to fine tune the model found in different ways using some datasets found online.
 The three training runs were conducted with the two datasets in this order:
@@ -34,12 +34,9 @@ The three training runs were conducted with the two datasets in this order:
     \item YOLOv8m run 3: Starting from run 1 we used ChessRed2K dataset for finetuning the model.
 \end{itemize}
 
-
-As we can see in the table below, the model achieved high precision
- and recall values across the three training runs,
+As we can see in the table below, the model achieved high precision and recall values across the three training runs,
 indicating its effectiveness in detecting and classifying chess pieces.
 All the runs showed converged approximately in 200 epochs.
-
 \begin{table}[ht]
 \centering
 \caption{Key performance metrics for the three YOLOv8m training runs.}
@@ -71,7 +68,7 @@ YOLOv8m Run 3 & $\sim$0.07 & $\sim$0.38 & $\sim$1.15 \\
 
 After the training runs, we used the best model from the third run of YOLOv8m for chess-piece object detection.
 We found out that the model has overfitted the training data, achieving very high precision and recall values on that dataset but not performing well on unseen data.
-
+\newline
 After that we decided to find better datasets for training the model and start a training run from scratch.
 We found out multiple datasets online on Roboflow in order to start multiple training runs and find the best model for chess-piece object detection.
 The datasets used for training YOLOv8m are summarized in table below.
@@ -91,9 +88,8 @@ Piece Detector \cite{cpd:dataset:piecedetector} & $\sim$18690 & $\sim$16821 & $\
 
 After many training runs we found out that the best model was with the second dataset,
 which was trained for 200 epochs with a batch size of 16 and image size of 640 and an initial learning rate set by the model.
-
 We used the YOLOv8m model, which is a medium-sized version of the YOLOv8 architecture, suitable for our chess-piece detection task.
-
+\newline
 We tried to use that model but we could not achieve the desired results.
 Then after many researches on the web and on ultralytics documentation we found out that the model was not trained properly.
 We decided to use the YOLOv8m model with the following parameters:
@@ -110,7 +106,7 @@ After 600 epoches we achieve some good results, but not good enough for our task
 We decided to merge all the datasets found online and start a new training run with the merged dataset.
 The merged dataset contains 53206 images of chess pieces in various conditions, which is a significant increase in the amount of training data compared to the previous runs.
 We trained the model for 1200 epochs with a batch size of 32 and an image size of 640.
-
+\newline
 After 200 epochs we started to see some good results in the trainig process, with the loss function decreasing and the precision and recall values increasing even more than the previous runs.
 \begin{figure}[ht]
 \centering
@@ -162,23 +158,22 @@ Merged Dataset Run 2 - 800+epochs & $\sim$0.8247 & $\sim$0.18167 & $\sim$0.39219
 
 Compared to earlier training runs and attempts with DETR that showed high loss values and poor convergence, YOLOv8m performed significantly better in terms of loss values and detection robustness.
 We decided to use the third run of YOLOv8m as our final model for chess-piece object detection, as it showed the best performance in terms of precision, recall, and mAP values.
-
+\newline
 At the end of our research we used ChessRed2k as validation dataset for all the trainings done.
 We have saved up to 5 checkpoints (4 from our training and 1 found online) and estimated their capabilities.
 For the one found online, we talked to the owner and asked if we could use it and also if he could give us the same dataset but we couldn't reach the same level of accuracy.
-
 \begin{table}[ht]
 \centering
 \caption{Final validation loss values for all the trainings done.}
-\label{tab:yolov8-loss:final}
+\label{tab:yolov8:performance:final}
 \resizebox{\linewidth}{!}{%
-\begin{tabular}{lccc}
+\begin{tabular}{lcccc}
 \textbf{Run} & \textbf{P} & \textbf{R} & \textbf{mAP50} & \textbf{mAP50-95} \\
 First Run - Small Dataset & $\sim$0.372 & $\sim$0.218 & $\sim$0.202 & $\sim$0.115\\
 Only Chess Piece Detection Dataset & $\sim$0.827 & $\sim$0.798 & $\sim$0.873 & $\sim$0.681\\
 Three Merged Dataset - From Scratch & $\sim$0.874 & $\sim$0.855 & $\sim$0.913 & $\sim$0.700\\
 Three Merged Dataset - From PreTrained& $\sim$0.833 & $\sim$0.847 & $\sim$0.911 & $\sim$0.735\\
-CheckPoint Online & $\sim$0.921 & $\sim$0.907 & $\sim$0.964 & $\sim$0.718\\
+CheckPoint Online & $\sim$0.921 & $\sim$0.907 & $\sim$0.964 & $\sim$0.718 
 \end{tabular}
 }
 \end{table}

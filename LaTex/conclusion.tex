@@ -1,14 +1,11 @@
 In this paper, we tried to bring a comprehensive framework for detecting 3D chessboards and identifying individual chess pieces in real-world chess games.
 The approach proposed combines traditional computer vision techniques with deep learning methods such as YOLOv8m to address the multiple challenges of variable lighting,
-perspective distortion and heterogeneous piece design recognition.
-
+perspective distortion and heterogeneous piece design recognition. \newline
 At the end of our study, we selected a top-down contour-based strategy that demonstrated superior robustness under real-world constraints.
 About the object detection part, we conducted extensive experimentation with both transformed-based and convolutional architectures, determining that YOLOv8m, trained on a large dataset, offers the most accurate and realiable performance for the task of chess-piece classification.
-
+\newline
 After all the recognition part, we developed a practical pipeline for generating FEN (Forsyth-Edwards Notation) notation from a board state, enabling seamless conversion from a physical board states to a standard digital representation.
 In addition, we proposed a binary embedding-based similarity search method for retrieving similar state games  from a large dataset of millions of games.
-
+\newline
 Despite the promising results, some limitation remains.
 Particularly the reliance on a full board visibility.
-
-Future work could explore the integration of 3D reconstruction, better occlusion handling and multimodal similarity metrics.
