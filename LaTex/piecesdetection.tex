@@ -183,7 +183,6 @@ CheckPoint Online & $\sim$0.921 & $\sim$0.907 & $\sim$0.964 & $\sim$0.718\\
 }
 \end{table}
 
-
 After getting our object detection done with the best checkpoint we could achieve we had to merge that information with our application.
 Easily speaking we have got 64 contours of the chessboard cells and the boxes given by the object detection.
 For every box we calculated a heuristic scaled point at 30px from the base of the box, after that we check if the calculated point could be found in one of the 64 contours.
