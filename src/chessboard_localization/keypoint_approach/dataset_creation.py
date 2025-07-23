@@ -189,8 +189,8 @@ def convert_chessred2k_dataset_corners(src_dataset_path, dest_dataset_path):
                     f_txt.write(" ".join(map(str, line)) + "\n")
 
 if __name__ == "__main__":
-    chessred2k_path = r"E:\projects\uni\Chessy3D\data\chessred"
-    board_localization_path = r"E:\projects\uni\Chessy3D\data\chessred_yolo"
+    chessred2k_path = r"C:\Users\villa\Desktop\ToTest\chessred2k"
+    board_localization_path = r"D:\CodeProjects\University\Chessy3d\Chessy3D\data\datachess_redYolo"
     #convert_chessred2k_dataset_corners(chessred2k_path, board_localization_path)
 
     convert_chessred2k_dataset_pieces(chessred2k_path, board_localization_path)

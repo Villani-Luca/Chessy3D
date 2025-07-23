@@ -10,7 +10,7 @@ Authors:
 1. Setup server postgres PostgreSQL 17
    1. install postgres extension pgvector to support efficient storage of the embeddings https://github.com/pgvector/pgvector?tab=readme-ov-file
    2. create an empty database
-   3. restore the following backup https://drive.google.com/file/d/1SWYzWhkMFzg8yCRK40U0ezMAgDsi4Nlu/view?usp=sharing
+   3. restore the following backup https://drive.google.com/file/d/1SWYzWhkMFzg8yCRK40U0ezMAgDsi4Nlu/view?usp=sharing (~15min)
    4. NOTE: if the database does not align with the following connection string "host=localhost user=postgres password=password dbname=chessy" it is possibile to modify it by changing the 'pgconn' inside the args dictionary of main.py  (line 209)
 2. install requirements.txt
    1. separate installation of torch with cuda 
@@ -19,11 +19,11 @@ Authors:
    ```
 3. application start
    1. activate virtual environment if used
-   2. navigate to project root folder
-   3. set environment variable PYTHONPATH="<path to project root folder (contains main.py)>" \ 
+   2. navigate to "chessy" folder
+   3. set environment variable PYTHONPATH="<path to project root folder "Chessy3D" (contains readme.md) >"
    ```powershell
    #powershell example
-   $env:PYTHONPATH="E:\projects\uni\chessy"
+   $env:PYTHONPATH="<path to extracted Zip folder ("Chessy3D")>"
    ```
    4. execute main.py script
 
