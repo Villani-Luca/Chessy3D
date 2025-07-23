@@ -27,6 +27,25 @@ Authors:
    ```
    4. execute main.py script
 
+## Application usage
+The application is divided in 3 subsections:
+- image to the left
+- chessboard to the right
+- retrieval datagrid to the bottom
+
+to start drag and drop and image, there are test images both bad and good inside the "test_images" folder, 
+this will populate if a chessboard is found all the tabs with the respective stage of the pipeline.
+If no image is found most of the tabs will be set to the original image.
+
+After a chessboard is extracted the right hand side will rerender with the chess state, **this should be oriented from
+white to black** using the buttons in the bottom left that rotate the position ( this step is needed to build the embedding correctly ).
+Beside the rotations buttons the fen representation can be copied from the textbox or the dedicated button.
+
+After rotating the chessboard by submitting a refresh request the database will be queried to retrieve the top 5 games that contain a similar position.
+it is possible that the same game will be returned if the positions in it are the best ranked.
+
+By double clicking on of the returned rows the position of the retrieved game will be shown, with its relative fen, to go back click on the green arrow
+
 ## NOTE
 The project contains the minimum amount of code possible to be able to run, we 
 skimmed off all the historical tests and tries, all the unused .pt and all the codes that 
