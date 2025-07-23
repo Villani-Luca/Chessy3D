@@ -3,19 +3,19 @@ import shutil
 from pathlib import Path
 
 convert_to_rf = {
-    '0': '3',
-    '1': '5',
-    '2': '2',
-    '3': '0',
-    '4': '4',
-    '5': '1',
-    '6': '9',
-    '7': '11',
-    '8': '8',
-    '9': '6',
-    '10': '10',
-    '11': '7',
-    '12': '12'
+    '0': '9',    # black-bishop -> black-bishop
+    '1': '11',    # black-king -> black-king
+    '2': '8',    # black-knight -> black-knight
+    '3': '6',    # black-pawn -> black-pawn
+    '4': '10',   # black-queen -> black-queen
+    '5': '7',   # black-rook -> black-rook
+    '6': '3',    # white-bishop -> white-bishop
+    '7': '5',    # white-king -> white-king
+    '8': '2',    # white-knight -> white-knight
+    '9': '0',    # white-pawn -> white-pawn
+    '10': '4',   # white-queen -> white-queen
+    '11': '1',   # white-rook -> white-rook
+    '12': '12'   # empty -> empty
 }
 
 def __calculate_bbox_for_pieces(bbox, img_w, img_h):
@@ -189,8 +189,8 @@ def convert_chessred2k_dataset_corners(src_dataset_path, dest_dataset_path):
                     f_txt.write(" ".join(map(str, line)) + "\n")
 
 if __name__ == "__main__":
-    chessred2k_path = r"D:\CodeProjects\University\Chessy3d\Chessy3D\data\chessred2k"
-    board_localization_path = "data/board_localization"
+    chessred2k_path = r"E:\projects\uni\Chessy3D\data\chessred"
+    board_localization_path = r"E:\projects\uni\Chessy3D\data\chessred_yolo"
     #convert_chessred2k_dataset_corners(chessred2k_path, board_localization_path)
 
-    convert_chessred2k_dataset_pieces(r"D:\CodeProjects\University\Chessy3d\Chessy3D\data\chessred2k", r"D:\CodeProjects\University\Chessy3d\Chessy3D\data\pieces_detection2")
+    convert_chessred2k_dataset_pieces(chessred2k_path, board_localization_path)
